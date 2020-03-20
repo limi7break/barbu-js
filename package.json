@@ -1,0 +1,43 @@
+{
+  "name": "barbu",
+  "version": "1.0.0",
+  "description": "barbu card game",
+  "private": true,
+  "scripts": {
+    "dev": "webpack --watch --mode development",
+    "prod": "webpack --mode production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/limi7break/barbu-js.git"
+  },
+  "author": "Michele Ferri",
+  "license": "GPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/limi7break/barbu-js/issues"
+  },
+  "homepage": "https://github.com/limi7break/barbu-js#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "cookie-parser": "^1.4.5",
+    "express": "^4.17.1",
+    "fomantic-ui-css": "^2.8.4",
+    "lodash": "^4.17.15",
+    "socket.io": "^2.3.0",
+    "socket.io-client": "^2.3.0",
+    "uuid": "^7.0.2",
+    "vue-socket.io-extended": "^4.0.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.8.7",
+    "@babel/preset-env": "^7.8.7",
+    "babel-loader": "^8.0.6",
+    "css-loader": "^3.4.2",
+    "vue": "^2.6.11",
+    "vue-loader": "^15.9.0",
+    "vue-style-loader": "^4.1.2",
+    "vue-template-compiler": "^2.6.11",
+    "webpack": "^4.42.0",
+    "webpack-cli": "^3.3.11"
+  }
+}

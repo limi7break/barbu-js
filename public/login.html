@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    
+        <link rel="icon" href="favicon.ico">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fomantic-ui/2.8.4/semantic.min.css" integrity="sha256-bsldvM021p5UCjvLS1wzZRXoL0B0bR5TpK1PxjWQpJY=" crossorigin="anonymous" />
+    
+        <title>barbu.js</title>
+
+        <style type="text/css">
+            body > .grid {
+                height: 100%;
+            }
+            .image {
+                margin-top: -100px;
+            }
+            .column {
+                max-width: 450px;
+            }
+            .ui.input > .icon {
+                z-index: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="ui middle aligned center aligned grid">
+            <div class="column">
+                <h2 class="ui red header">
+                    <i class="red heart icon"></i>
+                    <div class="content">
+                        barbu.js
+                    </div>
+                </h2>
+                <form method="POST" action="login" class="ui large form">
+                    <div class="ui stacked segment">
+                        <div class="field">
+                            <div class="ui left icon input">
+                                <i class="user icon"></i>
+                                <input type="text" name="username" placeholder="Username" autofocus>
+                            </div>
+                        </div>
+                        <!--
+                        <div class="field">
+                            <div class="ui left icon input">
+                                <i class="lock icon"></i>
+                                <input type="password" name="password" placeholder="Password">
+                            </div>
+                        </div>
+                        -->
+                        <button class="ui fluid large red submit button">Play!</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </body>
+</html>
