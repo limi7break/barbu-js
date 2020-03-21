@@ -2,16 +2,17 @@
     <div id="app" class="ui grid">
         <div class="twelve wide column">
             <div class="table row">
-                <Table :game="games[game]"
+                <Table :game="game"
+                       :games="games"
                        :players="players"
                        :scores="scores"
                        :trickCards="trickCards"
                        :firstPlayer="firstPlayer"
-                       :trumpSuit="trumpSuit"></Table>
+                       :trumpSuit="trumpSuit"
+                       :domino="domino"></Table>
             </div>
             <div class="cards row">
                 <Cards :hand="hand"
-                       :myTurn="currentPlayer == me"
                        @play="play">
                 </Cards>
             </div>
@@ -24,9 +25,8 @@
                      :playedGames="playedGames"></GameChooser>
         <TrumpSuitChooser ref="trump-suit-chooser"
                           :suits="suits"></TrumpSuitChooser>
-        <!--
-        <StartingValueChooser ref="starting-value-chooser"></StartingValueChooser>
-        -->
+        <StartingValueChooser ref="starting-value-chooser"
+                              :labels="labels"></StartingValueChooser>
         <DoublingChooser ref="doubling-chooser"
                          :players="players"
                          :matrix="matrix"
@@ -41,7 +41,7 @@
     import Sidebar from './components/Sidebar.vue'
     import GameChooser from './components/GameChooser.vue'
     import TrumpSuitChooser from './components/TrumpSuitChooser.vue'
-    //import StartingValueChooser from './components/StartingValueChooser.vue'
+    import StartingValueChooser from './components/StartingValueChooser.vue'
     import DoublingChooser from './components/DoublingChooser.vue'
     
     export default {
@@ -53,7 +53,7 @@
             Sidebar,
             GameChooser,
             TrumpSuitChooser,
-            //StartingValueChooser,
+            StartingValueChooser,
             DoublingChooser,
         },
 
@@ -74,21 +74,41 @@
                 'No ultime 2',
                 'Domino'
             ]
+
+            this.labels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
         },
 
         data () {
             return {
-                players: ['a', 'b', 'c', 'd'],
+                players: [],
                 scores: _.times(4, () => 0),
 
                 matrix: _.times(4, () => _.times(4, () => 0)),
                 dealer: 0,
                 game: 0,
-                currentPlayer: 0,
                 firstPlayer: 0,
+                currentPlayer: 0,
                 trickCards: [],
                 trumpSuit: '',              // for Atout
                 startingValue: 0,           // for Domino
+                domino: {
+                    'Hearts': {
+                        ace: false,
+                        cards: []
+                    },
+                    'Diamonds': {
+                        ace: false,
+                        cards: []
+                    },
+                    'Clubs': {
+                        ace: false,
+                        cards: []
+                    },
+                    'Spades': {
+                        ace: false,
+                        cards: []
+                    },
+                },
 
                 me: 0,
                 hand: [],
@@ -100,21 +120,7 @@
             }
         },
 
-        computed: {
-
-        },
-
         sockets: {
-            /*
-            connect () {
-                console.log('connected to server')
-            },
-            
-            disconnect () {
-                console.log('disconnected from server')
-            },
-            */
-
             connected (username) {
                 this.log(username + ' connected.')
             },
@@ -193,6 +199,10 @@
 
             trickCards (trickCards) {
                 this.trickCards = trickCards
+            },
+
+            domino (domino) {
+                this.domino = domino
             },
 
             scores (scores) {

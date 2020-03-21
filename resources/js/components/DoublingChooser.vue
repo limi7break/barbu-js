@@ -6,7 +6,8 @@
         <div class="content">
             <div class="ui form">
                 <div v-for="player, index in players" class="field"
-                     :class="{ disabled: (me == dealer) || (index == me) || (redoubling ? (matrix[index][me] != 1) : matrix[index][me]) }">
+                     
+                     :class="{ disabled: (!redoubling && me == dealer) || (index == me) || (redoubling ? (matrix[index][me] != 1) : matrix[index][me]) }">
                     <div class="ui checkbox">
                         <input v-model="matrix[me][index]"
                                type="checkbox"

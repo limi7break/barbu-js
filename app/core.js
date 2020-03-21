@@ -64,9 +64,9 @@ function isNewWinner (newCard, winningCard, trumpSuit) {
 }
 
 function getTrickWinner (firstPlayer, trickCards, trumpSuit) {
-    var trick = _.map([...trickCards], Card.fromNumber)
+    var trick = _.map(trickCards, Card.fromNumber)
 
-    winningCard = trick[0]
+    winningCard = _.first(trick)
     winningCardIndex = 0
 
     trick.slice(1).forEach((card, index) => {
@@ -79,8 +79,13 @@ function getTrickWinner (firstPlayer, trickCards, trumpSuit) {
     return (winningCardIndex + firstPlayer) % 4
 }
 
+function broadcast (players, eventName, ...args) {
+    _.map(players, player => player.socket.emit(eventName, ...args))
+}
+
 global.Card = Card
 global.Deck = Deck
 global.Player = Player
 global.isNewWinner = isNewWinner
 global.getTrickWinner = getTrickWinner
+global.broadcast = broadcast

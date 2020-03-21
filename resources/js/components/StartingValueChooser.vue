@@ -5,11 +5,10 @@
         </div>
         <div class="content">
             <div class="ui link list">
-                <a v-for="value in 13"
+                <a v-for="label, index in labels"
                    class="item"
-                   :class="{ disabled: playedGames[index] }"
                    @click="select(index)">
-                    {{ game }}
+                    {{ label }}
                 </a>
             </div>
         </div>
@@ -18,7 +17,7 @@
 
 <script>
     export default {
-        props: ['games', 'playedGames'],
+        props: ['labels'],
 
         data () {
             return {

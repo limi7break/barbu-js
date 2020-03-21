@@ -14,7 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
 
-var users = {'789f7743-9f2f-4587-ab48-b16cdb46f669': 'admin'} // TODO remove
+var users = {}
 
 app.get('/', (req, res) => {
     if (req.cookies.barbu === undefined) {
@@ -67,9 +67,7 @@ app.post('/login', (req, res) => {
 require('./core')
 require('./games')
 
-var players = [
-    new Player('admin')     // TODO remove
-]
+var players = []
 
 var started = false
 
@@ -155,6 +153,7 @@ async function play (dealer) {
     }
 
     // Doubling phase
+    io.emit('matrix', game.state.matrix)
     game.state.currentPlayer = (dealer + 1) % 4
 
     for (i in _.range(4)) {
@@ -182,14 +181,8 @@ async function play (dealer) {
         game.state.currentPlayer = (game.state.currentPlayer + 1) % 4
     }
 
-    if (game.state.game == 6) {
-        // Domino: the first player is the one after the dealer
-        game.state.firstPlayer   = (dealer + 1) % 4
-        game.state.currentPlayer = (dealer + 1) % 4
-    } else {
-        game.state.firstPlayer   = dealer
-        game.state.currentPlayer = dealer
-    }
+    game.state.firstPlayer   = dealer
+    game.state.currentPlayer = dealer
 
     scores = await game.play(players)
 
