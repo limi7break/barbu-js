@@ -17,8 +17,14 @@
 </template>
 
 <script>
+    import { games } from '@/constants'
+
     export default {
-        props: ['games', 'playedGames'],
+        props: ['playedGames'],
+
+        created () {
+            this.games = games
+        },
 
         data () {
             return {

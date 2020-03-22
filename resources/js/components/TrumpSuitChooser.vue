@@ -16,8 +16,12 @@
 </template>
 
 <script>
+    import { suits } from '@/constants'
+
     export default {
-        props: ['suits'],
+        created () {
+            this.suits = suits
+        },
 
         data () {
             return {

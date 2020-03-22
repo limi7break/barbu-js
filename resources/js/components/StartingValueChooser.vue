@@ -16,8 +16,12 @@
 </template>
 
 <script>
+    import { labels } from '@/constants'
+
     export default {
-        props: ['labels'],
+        created () {
+            this.labels = labels
+        },
 
         data () {
             return {

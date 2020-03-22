@@ -21,5 +21,10 @@ module.exports = {
             $: 'jquery',
             jQuery: 'jquery'
         })
-    ]
+    ],
+    resolve: {
+        alias: {
+            '@': __dirname + '/resources/js'
+        },
+    },
 }

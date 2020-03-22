@@ -6,10 +6,14 @@
         <div class="content">
             <div class="ui form">
                 <div v-for="player, index in players" class="field"
-                     
-                     :class="{ disabled: (!redoubling && me == dealer) || (index == me) || (redoubling ? (matrix[index][me] != 1) : matrix[index][me]) }">
+                     :class="{ disabled: cannotDouble(me, index) }">
                     <div class="ui checkbox">
-                        <input v-model="matrix[me][index]"
+                        <input v-if="redoubling ? redoubledBy(me, index) : doubledBy(me, index)"
+                               type="checkbox"
+                               :checked="true"
+                               :disabled="true">
+                        <input v-else
+                               v-model="matrix[me][index]"
                                type="checkbox"
                                :true-value="redoubling ? 2 : 1"
                                :false-value="0">
@@ -24,7 +28,7 @@
 
 <script>
     export default {
-        props: ['players', 'matrix', 'me', 'dealer'],
+        props: ['game', 'players', 'matrix', 'me', 'dealer'],
 
         data () {
             return {
@@ -46,6 +50,24 @@
             select () {
                 this.callback(this.matrix[this.me])
                 $('#doubling-chooser').modal('hide')
+            },
+
+            cannotDouble (me, other) {
+                if (!this.redoubling) {
+                    return (me == other)
+                        || (me == this.dealer)
+                        || (this.game == 6 && other != this.dealer)
+                } else {
+                    return !this.doubledBy(me, other)
+                }
+            },
+
+            doubledBy (me, other) {
+                return this.matrix[other][me]
+            },
+
+            redoubledBy (me, other) {
+                return this.matrix[other][me] > 1
             }
         }
     }

@@ -2,7 +2,9 @@
     <div id="table" class="ui middle aligned grid">
         <div class="one wide left info column">
             <div class="game">
-                {{ games[game] + ' ' + _.get(suitSymbols, trumpSuit, '') }}
+                {{ _.get(games, game, '') }}
+                <span v-if="game == 0"> {{ _.get(symbols, _.indexOf(suits, trumpSuit), '') }}</span>
+                <span v-if="game == 6"> {{ _.get(labels, startingValue, '') }}</span>
             </div>
             <div class="scores">
                 <div v-for="element in _.zip(players, scores)" v-if="element[0]">
@@ -58,22 +60,21 @@
 </template>
 
 <script>
-    import Cards from './Cards.vue'
+    import { games, suits, symbols, labels } from '@/constants'
+    import Cards from '@/components/Cards.vue'
 
     export default {
         components: {
             Cards
         },
 
-        props: ['game', 'games', 'players', 'scores', 'trickCards', 'firstPlayer', 'trumpSuit', 'domino'],
+        props: ['game', 'players', 'scores', 'trickCards', 'firstPlayer', 'trumpSuit', 'startingValue', 'domino'],
 
         created () {
-            this.suitSymbols = {
-                'Hearts': '♥',
-                'Diamonds': '♦',
-                'Clubs': '♣',
-                'Spades': '♠',
-            }
+            this.games = games
+            this.suits = suits
+            this.symbols = symbols
+            this.labels = labels
         },
 
         computed: {

@@ -84,20 +84,17 @@ async function start () {
         for (j in _.range(7)) {
             
             scores = await play(dealer)
+            
             _.each(players, (player, playerIndex) => player.score += scores[playerIndex])
-
-            _.map(players, player => player.socket.emit('log', '<b>Game finished!</b>'))
-            _.map(_.range(4), i =>
-                _.map(players, player => player.socket.emit('log', '<b>' + players[i].username + ': ' + scores[i] + '</b>'))
-            )
-            _.map(players, player => player.socket.emit('scores', _.map(players, 'score')))
+            broadcast(players, 'gameScores', scores)
+            broadcast(players, 'totalScores', _.map(players, 'score'))
         
         }
         dealer = dealer + 1
-        _.map(players, player => player.socket.emit('dealer', dealer))
+        broadcast(players, 'dealer', dealer)
     }
 
-    io.emit('end', _.map(players, 'score'))
+    io.emit('end')
 
     started = false
 }
@@ -105,7 +102,6 @@ async function start () {
 async function play (dealer) {
 
     var game = null
-    var scores = _.times(4, () => 0)
     var deck = new Deck()
 
     // Distribute cards and send hand to players
@@ -128,9 +124,9 @@ async function play (dealer) {
         await new Promise((resolve, reject) => 
             players[dealer].socket.emit('chooseTrumpSuit', response => {
                 game.state.trumpSuit = response
-                game.state.startingValue = 0
+                game.state.startingValue = null
                 io.emit('trumpSuit', response)
-                io.emit('startingValue', 0)
+                io.emit('startingValue', null)
                 resolve()
             })
         )
@@ -138,18 +134,18 @@ async function play (dealer) {
         // Domino: ask dealer to choose the starting value
         await new Promise((resolve, reject) => 
             players[dealer].socket.emit('chooseStartingValue', response => {
-                game.state.trumpSuit = ''
+                game.state.trumpSuit = null
                 game.state.startingValue = response
-                io.emit('trumpSuit', '')
+                io.emit('trumpSuit', null)
                 io.emit('startingValue', response)
                 resolve()
             })
         )
     } else {
-        game.state.trumpSuit = ''
-        game.state.startingValue = 0
-        io.emit('trumpSuit', '')
-        io.emit('startingValue', 0)
+        game.state.trumpSuit = null
+        game.state.startingValue = null
+        io.emit('trumpSuit', null)
+        io.emit('startingValue', null)
     }
 
     // Doubling phase
@@ -184,7 +180,7 @@ async function play (dealer) {
     game.state.firstPlayer   = dealer
     game.state.currentPlayer = dealer
 
-    scores = await game.play(players)
+    var scores = await game.play(players)
 
     // Calculate doubling
     var adjusted = [...scores]

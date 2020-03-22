@@ -11,11 +11,21 @@ class Game {
             firstPlayer: 0,
             currentPlayer: 0,
             trickCards: [],
-            trumpSuit: '',          // for Atout
-            startingValue: 0,       // for Domino
+            trumpSuit: null,        // for Atout
+            startingValue: null,    // for Domino
             terminal: false,
         }
     }
+
+    static games = [
+        'Atout',
+        'Non prendere',
+        'No cuori',
+        'No re cuori',
+        'No donne',
+        'No ultime 2',
+        'Domino'
+    ]
 
     validate (card) {
         // Default behavior: enforce following suit if possible.
@@ -62,13 +72,14 @@ class Game {
                     this.state.firstPlayer = this.state.currentPlayer
                     this.updateScores()
                     broadcast(this.players, 'log', this.players[this.state.currentPlayer].username + ' won the trick!\n')
-                    broadcast(this.players, 'log', _.join(_.map(this.state.trickCards, card => Card.fromNumber(card).toString()), ' '))
                     this.state.trickCards = []
                 } else {
                     this.state.currentPlayer = (this.state.currentPlayer + 1) % 4
                 }
 
-                broadcast(this.players, 'trickCards', this.state.trickCards)
+                if (this.state.trickCards.length) {
+                    broadcast(this.players, 'trickCards', this.state.trickCards)
+                }
 
                 if (!_.flatten(_.map(players, 'hand')).length) {
                     this.state.terminal = true

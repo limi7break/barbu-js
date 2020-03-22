@@ -3,12 +3,12 @@
         <div class="twelve wide column">
             <div class="table row">
                 <Table :game="game"
-                       :games="games"
                        :players="players"
                        :scores="scores"
                        :trickCards="trickCards"
                        :firstPlayer="firstPlayer"
                        :trumpSuit="trumpSuit"
+                       :startingValue="startingValue"
                        :domino="domino"></Table>
             </div>
             <div class="cards row">
@@ -21,13 +21,11 @@
             <Sidebar :logs="logs"></Sidebar>
         </div>
         <GameChooser ref="game-chooser"
-                     :games="games"
                      :playedGames="playedGames"></GameChooser>
-        <TrumpSuitChooser ref="trump-suit-chooser"
-                          :suits="suits"></TrumpSuitChooser>
-        <StartingValueChooser ref="starting-value-chooser"
-                              :labels="labels"></StartingValueChooser>
+        <TrumpSuitChooser ref="trump-suit-chooser"></TrumpSuitChooser>
+        <StartingValueChooser ref="starting-value-chooser"></StartingValueChooser>
         <DoublingChooser ref="doubling-chooser"
+                         :game="game"
                          :players="players"
                          :matrix="matrix"
                          :me="me"
@@ -36,13 +34,14 @@
 </template>
 
 <script>
-    import Table from './components/Table.vue'
-    import Cards from './components/Cards.vue'
-    import Sidebar from './components/Sidebar.vue'
-    import GameChooser from './components/GameChooser.vue'
-    import TrumpSuitChooser from './components/TrumpSuitChooser.vue'
-    import StartingValueChooser from './components/StartingValueChooser.vue'
-    import DoublingChooser from './components/DoublingChooser.vue'
+    import { games } from '@/constants'
+    import Table from '@/components/Table.vue'
+    import Cards from '@/components/Cards.vue'
+    import Sidebar from '@/components/Sidebar.vue'
+    import GameChooser from '@/components/GameChooser.vue'
+    import TrumpSuitChooser from '@/components/TrumpSuitChooser.vue'
+    import StartingValueChooser from '@/components/StartingValueChooser.vue'
+    import DoublingChooser from '@/components/DoublingChooser.vue'
     
     export default {
         name: 'App',
@@ -58,24 +57,7 @@
         },
 
         created () {
-            this.suits = [
-                'Hearts',
-                'Diamonds',
-                'Clubs',
-                'Spades'
-            ]
-
-            this.games = [
-                'Atout',
-                'Non prendere',
-                'No cuori',
-                'No re cuori',
-                'No donne',
-                'No ultime 2',
-                'Domino'
-            ]
-
-            this.labels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+            this.games = games
         },
 
         data () {
@@ -85,12 +67,12 @@
 
                 matrix: _.times(4, () => _.times(4, () => 0)),
                 dealer: 0,
-                game: 0,
+                game: null,
                 firstPlayer: 0,
                 currentPlayer: 0,
                 trickCards: [],
-                trumpSuit: '',              // for Atout
-                startingValue: 0,           // for Domino
+                trumpSuit: null,            // for Atout
+                startingValue: null,        // for Domino
                 domino: {
                     'Hearts': {
                         ace: false,
@@ -205,12 +187,18 @@
                 this.domino = domino
             },
 
-            scores (scores) {
+            gameScores (scores) {
+                this.log('<b>' + this.games[this.game] + ' finished! Scores:</b>')
+                _.each(scores, (score, playerIndex) => this.log('<b>' + this.players[playerIndex] + ': ' + score + '</b>'))
+            },
+
+            totalScores (scores) {
                 this.scores = scores
             },
 
-            end (scores) {
-                this.log('Game finished! Scores:', scores)
+            end () {
+                let winnerIndex = _.indexOf(this.scores, _.max(this.scores))
+                this.log('<b>Game finished! ' + this.players[winnerIndex] + ' wins!</b>')
             },
 
             log (message) {

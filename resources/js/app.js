@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import VueSocketIOExt from 'vue-socket.io-extended'
 import io from 'socket.io-client'
-import App from './App.vue'
+import App from '@/App.vue'
 
 var _ = require('lodash')
 Vue.prototype._ = _

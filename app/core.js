@@ -11,9 +11,9 @@ class Card {
     }
 
     static suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
-    static values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-
     static symbols = ['♥', '♦', '♣', '♠']
+
+    static values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     static labels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
 
     static fromNumber (n) {
