@@ -48,8 +48,7 @@ class Game {
         this.players = players
         
         while (!this.state.terminal) {
-            broadcast(this.players, 'firstPlayer', this.state.firstPlayer)
-            broadcast(this.players, 'currentPlayer', this.state.currentPlayer)
+            //broadcast(this.players, 'currentPlayer', this.state.currentPlayer)
             
             var playedCard = await new Promise((resolve, reject) => {
                 this.players[this.state.currentPlayer].socket.emit('turn', response => {
@@ -72,12 +71,14 @@ class Game {
                     this.state.firstPlayer = this.state.currentPlayer
                     this.updateScores()
                     broadcast(this.players, 'log', this.players[this.state.currentPlayer].username + ' won the trick!\n')
+                    broadcast(this.players, 'trickCards', this.state.trickCards)
                     this.state.trickCards = []
                 } else {
                     this.state.currentPlayer = (this.state.currentPlayer + 1) % 4
                 }
 
                 if (this.state.trickCards.length) {
+                    broadcast(this.players, 'firstPlayer', this.state.firstPlayer)
                     broadcast(this.players, 'trickCards', this.state.trickCards)
                 }
 
