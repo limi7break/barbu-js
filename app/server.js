@@ -14,7 +14,9 @@ app.use(bodyParser.urlencoded({ extended: true }))
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
 
-var users = {}
+var users = {
+    'd10cfe44-b43a-4e16-9f61-f369b94492bd': 'admin'
+}
 
 app.get('/', (req, res) => {
     if (req.cookies.barbu === undefined) {
@@ -48,7 +50,7 @@ app.post('/login', (req, res) => {
     let id = uuid.v4()
     let username = req.body.username
 
-    if (!username) {
+    if (!username || username.length > 16) {
         res.redirect('/')
     }
     
@@ -88,6 +90,7 @@ async function start () {
             _.each(players, (player, playerIndex) => player.score += scores[playerIndex])
             broadcast(players, 'gameScores', scores)
             broadcast(players, 'totalScores', _.map(players, 'score'))
+            broadcast(players, 'resetTable')
         
         }
         dealer = dealer + 1
@@ -217,7 +220,7 @@ io.on('connection', (socket) => {
 
     io.emit('connected', username)
 
-    console.log(username, 'connected with socket id', socket.id)
+    console.log(username, 'connected. Socket id:', socket.id)
 
     var playerIndex = _.findIndex(players, ['username', username])
 

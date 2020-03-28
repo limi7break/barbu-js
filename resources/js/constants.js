@@ -6,10 +6,10 @@ export const labels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', '
 
 export const games = [
     'Atout',
-    'Non prendere',
-    'No cuori',
-    'No re cuori',
-    'No donne',
-    'No ultime 2',
+    'No Tricks',
+    'No Hearts',
+    'No King of Hearts',
+    'No Queens',
+    'No Last Two',
     'Domino'
 ]

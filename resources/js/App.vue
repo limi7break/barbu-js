@@ -1,6 +1,6 @@
 <template>
     <div id="app" class="ui grid">
-        <div class="twelve wide column">
+        <div class="sixteen wide tablet twelve wide computer column">
             <div class="table row">
                 <Table :game="game"
                        :players="players"
@@ -9,7 +9,8 @@
                        :firstPlayer="firstPlayer"
                        :trumpSuit="trumpSuit"
                        :startingValue="startingValue"
-                       :domino="domino"></Table>
+                       :domino="domino"
+                       @graph="graph"></Table>
             </div>
             <div class="cards row">
                 <Cards :hand="hand"
@@ -17,9 +18,10 @@
                 </Cards>
             </div>
         </div>
-        <div class="four wide column">
+        <div class="four wide computer only column">
             <Sidebar :logs="logs"></Sidebar>
         </div>
+        
         <GameChooser ref="game-chooser"
                      :playedGames="playedGames"></GameChooser>
         <TrumpSuitChooser ref="trump-suit-chooser"></TrumpSuitChooser>
@@ -30,6 +32,9 @@
                          :matrix="matrix"
                          :me="me"
                          :dealer="dealer"></DoublingChooser>
+        <GraphModal ref="graph-modal"
+                    :players="players"
+                    :history="history"></GraphModal>
     </div>
 </template>
 
@@ -42,6 +47,7 @@
     import TrumpSuitChooser from '@/components/TrumpSuitChooser.vue'
     import StartingValueChooser from '@/components/StartingValueChooser.vue'
     import DoublingChooser from '@/components/DoublingChooser.vue'
+    import GraphModal from '@/components/GraphModal.vue'
     
     export default {
         name: 'App',
@@ -54,6 +60,7 @@
             TrumpSuitChooser,
             StartingValueChooser,
             DoublingChooser,
+            GraphModal,
         },
 
         created () {
@@ -64,6 +71,7 @@
             return {
                 players: [],
                 scores: _.times(4, () => 0),
+                history: _.times(4, () => [0]),
 
                 matrix: _.times(4, () => _.times(4, () => 0)),
                 dealer: 0,
@@ -189,7 +197,32 @@
 
             gameScores (scores) {
                 this.log('<b>' + this.games[this.game] + ' finished! Scores:</b>')
-                _.each(scores, (score, playerIndex) => this.log('<b>' + this.players[playerIndex] + ': ' + score + '</b>'))
+                _.each(scores, (score, playerIndex) => {
+                    this.history[playerIndex].push(score)
+                    this.log('<b>' + this.players[playerIndex] + ': ' + score + '</b>')
+                })
+            },
+
+            resetTable () {
+                this.trickCards = []
+                this.domino = {
+                    'Hearts': {
+                        ace: false,
+                        cards: []
+                    },
+                    'Diamonds': {
+                        ace: false,
+                        cards: []
+                    },
+                    'Clubs': {
+                        ace: false,
+                        cards: []
+                    },
+                    'Spades': {
+                        ace: false,
+                        cards: []
+                    },
+                }
             },
 
             totalScores (scores) {
@@ -211,6 +244,10 @@
                 this.callback(card)
                 this.callback = () => null
             },
+
+            graph () {
+                this.$refs['graph-modal'].init()
+            },
             
             log (message) {
                 //this.logs.push('[' + (new Date()).toTimeString().substr(0,5) + '] ' + message)
@@ -225,6 +262,10 @@
 </script>
 
 <style>
+    html {
+        background-color: #ce6868;
+    }
+
     #app {
         background-color: #e79292;
     }

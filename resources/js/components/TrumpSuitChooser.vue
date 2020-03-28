@@ -10,6 +10,10 @@
                    @click="select(suit)">
                     {{ suit }}
                 </a>
+                <a class="item"
+                   @click="select(null)">
+                    No trump
+                </a>
             </div>
         </div>
     </div>

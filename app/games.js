@@ -17,16 +17,6 @@ class Game {
         }
     }
 
-    static games = [
-        'Atout',
-        'Non prendere',
-        'No cuori',
-        'No re cuori',
-        'No donne',
-        'No ultime 2',
-        'Domino'
-    ]
-
     validate (card) {
         // Default behavior: enforce following suit if possible.
         
@@ -48,43 +38,53 @@ class Game {
         this.players = players
         
         while (!this.state.terminal) {
-            //broadcast(this.players, 'currentPlayer', this.state.currentPlayer)
-            
+            broadcast(this.players, 'currentPlayer', this.state.currentPlayer)
+
+            // Ask current player for a card
             var playedCard = await new Promise((resolve, reject) => {
                 this.players[this.state.currentPlayer].socket.emit('turn', response => {
                     resolve(response)
                 })
             })
 
+            // Validate played card
             if (this.validate(playedCard)) {
-                _.remove(this.players[this.state.currentPlayer].hand, card => card == playedCard)
-                this.state.trickCards.push(playedCard)
-                this.players[this.state.currentPlayer].socket.emit('hand', this.players[this.state.currentPlayer].hand)
                 
-                // If the trick ended:
-                //     - Calculate trick winner and update first and current player
-                //     - Update scores
-                //     - Empty trick cards
-                //     - Tell players the trick winner
+                // Remove played card from the player's hand
+                _.remove(this.players[this.state.currentPlayer].hand, card => card == playedCard)
+                
+                // Put card in the trick cards
+                this.state.trickCards.push(playedCard)
+                
+                // Update player's hand in the client
+                this.players[this.state.currentPlayer].socket.emit('hand', this.players[this.state.currentPlayer].hand)
+
+                broadcast(this.players, 'firstPlayer', this.state.firstPlayer)
+                broadcast(this.players, 'trickCards', this.state.trickCards)
+                
+                // Trick ended?
                 if (this.state.trickCards.length == 4) {
-                    this.state.currentPlayer = getTrickWinner(this.state.firstPlayer, this.state.trickCards, this.state.trumpSuit)
-                    this.state.firstPlayer = this.state.currentPlayer
+                    
+                    // Calculate trick winner and update first/current player accordingly
+                    this.state.firstPlayer = getTrickWinner(this.state.firstPlayer, this.state.trickCards, this.state.trumpSuit)
+                    this.state.currentPlayer = this.state.firstPlayer
+                    
+                    // Update scores based on trick winner and trick cards (game-specific)
                     this.updateScores()
+                    
                     broadcast(this.players, 'log', this.players[this.state.currentPlayer].username + ' won the trick!\n')
-                    broadcast(this.players, 'trickCards', this.state.trickCards)
+                    
                     this.state.trickCards = []
+                
                 } else {
                     this.state.currentPlayer = (this.state.currentPlayer + 1) % 4
                 }
 
-                if (this.state.trickCards.length) {
-                    broadcast(this.players, 'firstPlayer', this.state.firstPlayer)
-                    broadcast(this.players, 'trickCards', this.state.trickCards)
-                }
-
+                // If everyone has an empty hand, the state is terminal
                 if (!_.flatten(_.map(players, 'hand')).length) {
                     this.state.terminal = true
                 }
+            
             } else {
                 this.players[this.state.currentPlayer].socket.emit('log', 'Card not valid.')
             }
@@ -297,26 +297,35 @@ class Domino extends Game {
         this.players = players
         
         // In domino, the first player is the one after the dealer
-        this.state.firstPlayer = (this.state.firstPlayer + 1) % 4
         this.state.currentPlayer = (this.state.currentPlayer + 1) % 4
 
         while (!this.state.terminal) {
-            broadcast(this.players, 'firstPlayer', this.state.firstPlayer)
             broadcast(this.players, 'currentPlayer', this.state.currentPlayer)
             
+            // Check if the current player can play a card
+            // If they can't, automatically pass the turn
             if (this.canPlay(this.state.currentPlayer)) {
 
+                // Ask current player for a card
                 var playedCard = await new Promise((resolve, reject) => {
                     this.players[this.state.currentPlayer].socket.emit('turn', response => {
                         resolve(response)
                     })
                 })
 
+                // Validate played card
                 if (this.validate(playedCard)) {
+                    
+                    // Remove played card from the player's hand
                     _.remove(this.players[this.state.currentPlayer].hand, card => card == playedCard)
+                    
+                    // Attach card to domino
                     this.attachCard(playedCard)
+                    
+                    // Update player's hand in the client
                     this.players[this.state.currentPlayer].socket.emit('hand', this.players[this.state.currentPlayer].hand)
                     
+                    // If the player has an empty hand, give them the highest available score
                     if (!this.players[this.state.currentPlayer].hand.length) {
                         this.state.scores[this.state.currentPlayer] = this.state.points.shift()
                     }
@@ -325,9 +334,11 @@ class Domino extends Game {
 
                     broadcast(this.players, 'domino', this.state.domino)
 
+                    // If everyone has an empty hand, the state is terminal
                     if (!_.flatten(_.map(players, 'hand')).length) {
                         this.state.terminal = true
                     }
+                
                 } else {
                     this.players[this.state.currentPlayer].socket.emit('log', 'Card not valid.')
                 }

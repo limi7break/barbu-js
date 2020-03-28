@@ -1,19 +1,23 @@
 <template>
     <div id="table" class="ui middle aligned grid">
-        <div class="one wide left info column">
+        <div class="info">
             <div class="game">
                 {{ _.get(games, game, '') }}
                 <span v-if="game == 0"> {{ _.get(symbols, _.indexOf(suits, trumpSuit), '') }}</span>
                 <span v-if="game == 6"> {{ _.get(labels, startingValue, '') }}</span>
             </div>
-            <div class="scores">
-                <div v-for="element in _.zip(players, scores)" v-if="element[0]">
-                    {{ element[0] }}: {{ element[1] }}
-                </div>
+            <div class="divider"></div>
+            <div class="score" v-for="element in _.zip(players, scores)" v-if="element[0]">
+                {{ element[0] }}: {{ element[1] }}
             </div>
+            <div class="divider"></div>
+            <button class="ui tiny basic icon button" @click="$emit('graph')">
+                <i class="chart line icon"></i>
+                Graph
+            </button>
         </div>
         <template v-if="game == 6">
-            <div class="fourteen wide center aligned domino column">
+            <div class="sixteen wide center aligned domino column">
                 <Cards domino :hand="hearts"></Cards>
                 <Cards domino :hand="diamonds"></Cards>
                 <Cards domino :hand="clubs"></Cards>
@@ -29,7 +33,7 @@
                 <label>{{ players[3] }}</label>
             </div>
         </div>
-        <div class="four wide center aligned column">
+        <div class="six wide center aligned column">
             <div class="top player">
                 <label>{{ players[2] }}</label>
                 <div>
@@ -53,9 +57,6 @@
             </div>
         </div>
         </template>
-        <div class="one wide right info column">
-            
-        </div>
     </div>
 </template>
 
@@ -110,27 +111,18 @@
         flex-flow: column;
     }
 
-    #table .left.info.column {
-        height: 100%;
-        padding-left: 1em !important;
-        white-space: nowrap;
+    #table .info {
+        position: fixed;
+        padding: 1em 0 0 1em !important;
+        z-index: 101;
     }
 
-    #table .left.info.column > * {
-        padding-top: 0.5em;
-    }
-
-    #table .left.info.column > .game {
+    #table .info > .game {
         font-weight: bold;
     }
 
-    #table .left.info.column > .scores {
-        position: absolute;
-        z-index: 1;
-    }
-
-    #table .right.info.column {
-        height: 100%;
+    #table .info > .divider {
+        margin: 1em 0;
     }
 
     #table .bottom.player, #table .top.player {
