@@ -198,7 +198,7 @@
             gameScores (scores) {
                 this.log('<b>' + this.games[this.game] + ' finished! Scores:</b>')
                 _.each(scores, (score, playerIndex) => {
-                    this.history[playerIndex].push(score)
+                    this.history[playerIndex].push(this.history[playerIndex].slice(-1)[0] + score)
                     this.log('<b>' + this.players[playerIndex] + ': ' + score + '</b>')
                 })
             },
