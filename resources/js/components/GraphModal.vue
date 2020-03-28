@@ -29,7 +29,8 @@
                     data: this.history[playerIndex],
                     borderColor: colors[playerIndex],
                     pointRadius: 2,
-                    borderWidth: 2
+                    borderWidth: 2,
+                    fill: false
                 }))
 
                 new Chart(this.$refs.canvas.getContext('2d'), {
