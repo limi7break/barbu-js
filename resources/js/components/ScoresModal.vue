@@ -1,7 +1,7 @@
 <template>
-    <div id="graph-modal" class="ui large modal">
+    <div id="scores-modal" class="ui large modal">
         <div class="header">
-            Score
+            Scores
         </div>
         <div class="content">
             <canvas ref="canvas"></canvas>
@@ -46,12 +46,8 @@
                     }
                 })
 
-                $('#graph-modal').modal('show')
+                $('#scores-modal').modal('show')
             },
         }
     }
 </script>
-
-<style>
-    
-</style>

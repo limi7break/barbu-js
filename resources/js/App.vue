@@ -5,12 +5,14 @@
                 <Table :game="game"
                        :players="players"
                        :scores="scores"
+                       :matrix="matrix"
                        :trickCards="trickCards"
                        :firstPlayer="firstPlayer"
                        :trumpSuit="trumpSuit"
                        :startingValue="startingValue"
                        :domino="domino"
-                       @graph="graph"></Table>
+                       @score="score"
+                       @info="info"></Table>
             </div>
             <div class="cards row">
                 <Cards :hand="hand"
@@ -19,7 +21,7 @@
             </div>
         </div>
         <div class="four wide computer only column">
-            <Sidebar :logs="logs"></Sidebar>
+            <Sidebar ref="sidebar" :logs="logs"></Sidebar>
         </div>
         
         <GameChooser ref="game-chooser"
@@ -32,9 +34,14 @@
                          :matrix="matrix"
                          :me="me"
                          :dealer="dealer"></DoublingChooser>
-        <GraphModal ref="graph-modal"
-                    :players="players"
-                    :history="history"></GraphModal>
+        <ScoresModal ref="scores-modal"
+                     :players="players"
+                     :history="history"></ScoresModal>
+        <InfoModal ref="info-modal"
+                   :playedGames="playedGames"
+                   :players="players"
+                   :dealer="dealer"
+                   :dealerDoubled="dealerDoubled"></InfoModal>
     </div>
 </template>
 
@@ -47,7 +54,8 @@
     import TrumpSuitChooser from '@/components/TrumpSuitChooser.vue'
     import StartingValueChooser from '@/components/StartingValueChooser.vue'
     import DoublingChooser from '@/components/DoublingChooser.vue'
-    import GraphModal from '@/components/GraphModal.vue'
+    import ScoresModal from '@/components/ScoresModal.vue'
+    import InfoModal from '@/components/InfoModal.vue'
     
     export default {
         name: 'App',
@@ -60,7 +68,8 @@
             TrumpSuitChooser,
             StartingValueChooser,
             DoublingChooser,
-            GraphModal,
+            ScoresModal,
+            InfoModal,
         },
 
         created () {
@@ -74,6 +83,7 @@
                 history: _.times(4, () => [0]),
 
                 matrix: _.times(4, () => _.times(4, () => 0)),
+                dealerDoubled: _.times(4, () => 0),
                 dealer: 0,
                 game: null,
                 firstPlayer: 0,
@@ -117,6 +127,10 @@
 
             disconnected (username) {
                 this.log(username + ' disconnected.')
+            },
+
+            state (state) {
+
             },
 
             me (playerIndex) {
@@ -169,6 +183,10 @@
 
             matrix (matrix) {
                 this.matrix = matrix
+            },
+
+            dealerDoubled (dealerDoubled) {
+                this.dealerDoubled = dealerDoubled
             },
 
             chooseRedoubling (callback) {
@@ -245,17 +263,21 @@
                 this.callback = () => null
             },
 
-            graph () {
-                this.$refs['graph-modal'].init()
+            score () {
+                this.$refs['scores-modal'].init()
+            },
+
+            info () {
+                this.$refs['info-modal'].init()
             },
             
             log (message) {
                 //this.logs.push('[' + (new Date()).toTimeString().substr(0,5) + '] ' + message)
                 this.logs.push(message)
-                setTimeout(() => {
-                    var div = document.getElementById('sidebar')
-                    div.scrollTop = div.scrollHeight
-                }, 1)
+                this.$nextTick(() => {
+                    let sidebar = this.$refs.sidebar.$el
+                    sidebar.scrollTop = sidebar.scrollHeight
+                })
             },
         }
     }

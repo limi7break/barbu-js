@@ -11,6 +11,7 @@ require('fomantic-ui-css/semantic.min.js')
 const socket = io()
 
 Vue.use(VueSocketIOExt, socket)
+Vue.config.ignoredElements = ['Connection']
 
 new Vue({
     render: h => h(App),

@@ -83,9 +83,13 @@ async function start () {
     var scores = _.times(4, () => 0)
     
     for (i in _.range(players.length)) {
+        
+        var dealerDoubled = _.times(4, () => 0)
+        broadcast(players, 'dealerDoubled', dealerDoubled)
+        
         for (j in _.range(7)) {
             
-            scores = await play(dealer)
+            scores = await play(dealer, dealerDoubled)
             
             _.each(players, (player, playerIndex) => player.score += scores[playerIndex])
             broadcast(players, 'gameScores', scores)
@@ -93,8 +97,11 @@ async function start () {
             broadcast(players, 'resetTable')
         
         }
+        
         dealer = dealer + 1
         broadcast(players, 'dealer', dealer)
+        broadcast(players, 'playedGames', _.times(7, () => false))
+    
     }
 
     io.emit('end')
@@ -102,7 +109,7 @@ async function start () {
     started = false
 }
 
-async function play (dealer) {
+async function play (dealer, dealerDoubled) {
 
     var game = null
     var deck = new Deck()
@@ -117,7 +124,7 @@ async function play (dealer) {
             game = createGame(response)
             io.emit('game', response)
             players[dealer].playedGames[response] = true
-            players[dealer].socket.emit('playedGames', players[dealer].playedGames)
+            broadcast(players, 'playedGames', players[dealer].playedGames)
             resolve()
         })
     )
@@ -159,6 +166,12 @@ async function play (dealer) {
         await new Promise((resolve, reject) => 
             players[game.state.currentPlayer].socket.emit('chooseDoubling', response => {
                 game.state.matrix[game.state.currentPlayer] = response
+                
+                if (response[dealer]) {
+                    dealerDoubled[game.state.currentPlayer] += 1
+                    broadcast(players, 'dealerDoubled', dealerDoubled)
+                }
+
                 io.emit('matrix', game.state.matrix)
                 resolve()
             })
