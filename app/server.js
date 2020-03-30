@@ -95,6 +95,7 @@ async function start () {
             broadcast(players, 'gameScores', scores)
             broadcast(players, 'totalScores', _.map(players, 'score'))
             broadcast(players, 'resetTable')
+            broadcast(players, 'matrix', _.times(4, () => _.times(4, () => 0)))
         
         }
         
