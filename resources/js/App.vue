@@ -12,36 +12,44 @@
                        :startingValue="startingValue"
                        :domino="domino"
                        @score="score"
-                       @info="info"></Table>
+                       @info="info"
+                       />
             </div>
             <div class="cards row">
                 <Cards :hand="hand"
-                       @play="play">
-                </Cards>
+                       @play="play"
+                       />
             </div>
         </div>
         <div class="four wide computer only column">
-            <Sidebar ref="sidebar" :logs="logs"></Sidebar>
+            <Sidebar ref="sidebar" :logs="logs" />
         </div>
         
         <GameChooser ref="game-chooser"
-                     :playedGames="playedGames"></GameChooser>
-        <TrumpSuitChooser ref="trump-suit-chooser"></TrumpSuitChooser>
-        <StartingValueChooser ref="starting-value-chooser"></StartingValueChooser>
+                     :playedGames="playedGames"
+                     />
+        <TrumpSuitChooser ref="trump-suit-chooser" />
+        <StartingValueChooser ref="starting-value-chooser" />
         <DoublingChooser ref="doubling-chooser"
                          :game="game"
                          :players="players"
                          :matrix="matrix"
                          :me="me"
-                         :dealer="dealer"></DoublingChooser>
+                         :dealer="dealer"
+                         :forceDealer="me != dealer
+                                    && _.sum(playedGames) > 5
+                                    && dealerDoubled[me] < 2"
+                         />
         <ScoresModal ref="scores-modal"
                      :players="players"
-                     :history="history"></ScoresModal>
+                     :history="history"
+                     />
         <InfoModal ref="info-modal"
                    :playedGames="playedGames"
                    :players="players"
                    :dealer="dealer"
-                   :dealerDoubled="dealerDoubled"></InfoModal>
+                   :dealerDoubled="dealerDoubled"
+                   />
     </div>
 </template>
 

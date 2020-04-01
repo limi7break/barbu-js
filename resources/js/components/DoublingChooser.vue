@@ -8,7 +8,7 @@
                 <div v-for="player, index in players" class="field"
                      :class="{ disabled: cannotDouble(me, index) }">
                     <div class="ui checkbox">
-                        <input v-if="redoubling ? redoubledBy(me, index) : doubledBy(me, index)"
+                        <input v-if="redoubling ? redoubledBy(me, index) : (doubledBy(me, index) || (index == dealer && forceDealer))"
                                type="checkbox"
                                :checked="true"
                                :disabled="true">
@@ -28,7 +28,7 @@
 
 <script>
     export default {
-        props: ['game', 'players', 'matrix', 'me', 'dealer'],
+        props: ['game', 'players', 'matrix', 'me', 'dealer', 'forceDealer'],
 
         data () {
             return {
@@ -41,6 +41,9 @@
             init (callback, redoubling = false) {
                 this.redoubling = redoubling
                 this.callback = callback
+                if (this.forceDealer) {
+                    this.matrix[this.me][this.dealer] = 1
+                }
                 $('#doubling-chooser').modal({
                     closable: false,
                     dimmerSettings: { opacity: 0 }
