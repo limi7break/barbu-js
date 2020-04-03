@@ -11,12 +11,6 @@
                    @click="select(index)">
                     {{ contract }}
                 </a>
-                <a 
-                   class="item"
-                   
-                   @click="select('disconnected')">
-                    disconnected
-                </a>
             </div>
         </div>
     </div>

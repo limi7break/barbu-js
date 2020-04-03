@@ -8,7 +8,7 @@
                 <div class="row">
                     <div class="six wide column">
                         <h4 class="ui header">Remaining contracts</h4>
-                        <div v-for="element in _.zip(contracts, playedGames)" v-if="!element[1]">
+                        <div v-for="element in _.zip(contracts, playedContracts)" v-if="!element[1]">
                             {{ element[0] }}
                         </div>
                     </div>
@@ -28,7 +28,7 @@
     import { contracts } from '@/constants'
 
     export default {
-        props: ['playedGames', 'players', 'dealer', 'dealerDoubled'],
+        props: ['playedContracts', 'players', 'dealer', 'dealerDoubled'],
 
         created () {
             this.contracts = contracts
