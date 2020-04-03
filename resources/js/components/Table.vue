@@ -1,10 +1,10 @@
 <template>
     <div id="table" class="ui middle aligned grid">
         <div class="info">
-            <div class="current game">
-                {{ _.get(games, game, '') }}
-                <span v-if="game == 0"> {{ _.get(symbols, _.indexOf(suits, trumpSuit), '') }}</span>
-                <span v-if="game == 6"> {{ _.get(labels, startingValue, '') }}</span>
+            <div class="current contract">
+                {{ _.get(contracts, contract, '') }}
+                <span v-if="contract == 0"> {{ _.get(symbols, _.indexOf(suits, trumpSuit), '') }}</span>
+                <span v-if="contract == 6"> {{ _.get(labels, startingValue, '') }}</span>
             </div>
             <div class="divider"></div>
             <div class="scores">
@@ -33,7 +33,7 @@
                 </button>
             </div>
         </div>
-        <template v-if="game == 6">
+        <template v-if="contract == 6">
             <div class="sixteen wide center aligned domino column">
                 <Cards domino :hand="hearts"></Cards>
                 <Cards domino :hand="diamonds"></Cards>
@@ -134,7 +134,7 @@
 </template>
 
 <script>
-    import { games, suits, symbols, labels } from '@/constants'
+    import { contracts, suits, symbols, labels } from '@/constants'
     import Cards from '@/components/Cards.vue'
 
     export default {
@@ -142,10 +142,10 @@
             Cards,
         },
 
-        props: ['game', 'players', 'scores', 'matrix', 'trickCards', 'firstPlayer', 'trumpSuit', 'startingValue', 'domino'],
+        props: ['contract', 'players', 'scores', 'matrix', 'trickCards', 'firstPlayer', 'trumpSuit', 'startingValue', 'domino'],
 
         created () {
-            this.games = games
+            this.contracts = contracts
             this.suits = suits
             this.symbols = symbols
             this.labels = labels
@@ -204,7 +204,7 @@
         z-index: 101;
     }
 
-    #table > .info > .current.game {
+    #table > .info > .current.contract {
         font-weight: bold;
     }
 

@@ -1,31 +1,39 @@
 var _ = require('lodash')
 require('./core')
 
-class Game {
-    constructor (dealer, game) {
-        this.state = {
-            scores: _.times(4, () => 0),
-            matrix: _.times(4, () => _.times(4, () => 0)),
-            dealer: dealer,
-            game: game,
-            firstPlayer: 0,
-            currentPlayer: 0,
-            trickCards: [],
-            trumpSuit: null,        // for Atout
-            startingValue: null,    // for Domino
-            terminal: false,
-        }
+class Contract {
+    constructor (dealer, contract) {
+        this.dealer = dealer
+        this.contract = contract
+        this.matrix = _.times(4, () => _.times(4, () => 0))
+        this.firstPlayer = 0
+        this.currentPlayer = 0
+        this.trickCards = []
+        
+        this.trumpSuit = null           // for Atout
+        
+        this.startingValue = null       // for Domino
+        this.domino = {}
+        this.points = []
+        
+        this.hearts = null              // for No Hearts
+        
+        this.queens = null              // for No Queens
+
+        this.players = []
+        this.scores = _.times(4, () => 0)
+        this.terminal = false
     }
 
     validate (card) {
         // Default behavior: enforce following suit if possible.
         
-        if (!this.state.trickCards.length) {
+        if (!this.trickCards.length) {
             return true
         }
 
-        var trick = _.map(this.state.trickCards, Card.fromNumber)
-        var hand = _.map(this.players[this.state.currentPlayer].hand, Card.fromNumber)
+        var trick = _.map(this.trickCards, Card.fromNumber)
+        var hand = _.map(this.players[this.currentPlayer].hand, Card.fromNumber)
 
         if(!_.filter(hand, card => card.suit == _.first(trick).suit).length) {
             return true
@@ -37,94 +45,96 @@ class Game {
     async play (players) {
         this.players = players
         
-        while (!this.state.terminal) {
-            broadcast(this.players, 'currentPlayer', this.state.currentPlayer)
+        while (!this.terminal) {
+            broadcast(this.players, 'currentPlayer', this.currentPlayer)
 
             // Ask current player for a card
-            var playedCard = await new Promise((resolve, reject) => {
-                this.players[this.state.currentPlayer].socket.emit('turn', response => {
-                    resolve(response)
+            do {
+                var playedCard = await new Promise((resolve, reject) => {
+                    this.players[this.currentPlayer].socket.emit('turn', response => {
+                        resolve(response)
+                    })
                 })
-            })
+            } while (playedCard === undefined)
 
             // Validate played card
             if (this.validate(playedCard)) {
                 
                 // Remove played card from the player's hand
-                _.remove(this.players[this.state.currentPlayer].hand, card => card == playedCard)
+                _.remove(this.players[this.currentPlayer].hand, card => card == playedCard)
                 
                 // Put card in the trick cards
-                this.state.trickCards.push(playedCard)
+                this.trickCards.push(playedCard)
                 
                 // Update player's hand in the client
-                this.players[this.state.currentPlayer].socket.emit('hand', this.players[this.state.currentPlayer].hand)
+                this.players[this.currentPlayer].socket.emit('hand', this.players[this.currentPlayer].hand)
 
-                broadcast(this.players, 'firstPlayer', this.state.firstPlayer)
-                broadcast(this.players, 'trickCards', this.state.trickCards)
+                broadcast(this.players, 'firstPlayer', this.firstPlayer)
+                broadcast(this.players, 'trickCards', this.trickCards)
                 
                 // Trick ended?
-                if (this.state.trickCards.length == 4) {
+                if (this.trickCards.length == 4) {
                     
                     // Calculate trick winner and update first/current player accordingly
-                    this.state.firstPlayer = getTrickWinner(this.state.firstPlayer, this.state.trickCards, this.state.trumpSuit)
-                    this.state.currentPlayer = this.state.firstPlayer
+                    this.firstPlayer = getTrickWinner(this.firstPlayer, this.trickCards, this.trumpSuit)
+                    this.currentPlayer = this.firstPlayer
                     
-                    // Update scores based on trick winner and trick cards (game-specific)
+                    // Update scores based on trick winner and trick cards (contract specific)
                     this.updateScores()
                     
-                    broadcast(this.players, 'log', this.players[this.state.currentPlayer].username + ' won the trick!\n')
+                    broadcast(this.players, 'log', this.players[this.currentPlayer].username + ' won the trick!\n')
                     
-                    this.state.trickCards = []
+                    this.trickCards = []
                 
                 } else {
-                    this.state.currentPlayer = (this.state.currentPlayer + 1) % 4
+                    this.currentPlayer = (this.currentPlayer + 1) % 4
                 }
 
                 // If everyone has an empty hand, the state is terminal
                 if (!_.flatten(_.map(players, 'hand')).length) {
-                    this.state.terminal = true
+                    this.terminal = true
                 }
             
             } else {
-                this.players[this.state.currentPlayer].socket.emit('log', 'Card not valid.')
+                this.players[this.currentPlayer].socket.emit('log', 'Card not valid.')
             }
         }
 
-        return this.state.scores
+        return this.scores
     }
 }
 
-class Atout extends Game {
+class Atout extends Contract {
     constructor (dealer) {
         super(dealer, 0)
     }
 
     updateScores () {
-        this.state.scores[this.state.currentPlayer] += 5
+        this.scores[this.currentPlayer] += 5
     }
 }
 
-class NoTricks extends Game {
+class NoTricks extends Contract {
     constructor (dealer) {
         super(dealer, 1)
     }
 
     updateScores () {
-        this.state.scores[this.state.currentPlayer] -= 2
+        this.scores[this.currentPlayer] -= 2
     }
 }
 
-class NoHearts extends Game {
+class NoHearts extends Contract {
     constructor (dealer) {
         super(dealer, 2)
-        this.state.hearts = 0
+        this.hearts = 0
     }
 
     validate (card) {
-        var trick = _.map(this.state.trickCards, Card.fromNumber)
-        var hand = _.map(this.players[this.state.currentPlayer].hand, Card.fromNumber)
+        var trick = _.map(this.trickCards, Card.fromNumber)
+        var hand = _.map(this.players[this.currentPlayer].hand, Card.fromNumber)
 
-        if (!this.state.trickCards.length) {
+        if (!this.trickCards.length) {
             if (_.some(hand, card => card.suit != 'Hearts')) {
                 return Card.fromNumber(card).suit != 'Hearts'
             }
@@ -139,33 +149,33 @@ class NoHearts extends Game {
     }
 
     updateScores () {
-        _.each(_.map(this.state.trickCards, Card.fromNumber), card => {
+        _.each(_.map(this.trickCards, Card.fromNumber), card => {
             if (card.suit == 'Hearts') {
-                this.state.hearts += 1
+                this.hearts += 1
                 if (card.value > 7) {
-                    this.state.scores[this.state.currentPlayer] -= 4
+                    this.scores[this.currentPlayer] -= 4
                 } else {
-                    this.state.scores[this.state.currentPlayer] -= 2
+                    this.scores[this.currentPlayer] -= 2
                 }
             }
         })
 
-        if (this.state.hearts == 13) {
-            this.state.terminal = true
+        if (this.hearts == 13) {
+            this.terminal = true
         }
     }
 }
 
-class NoKingOfHearts extends Game {
+class NoKingOfHearts extends Contract {
     constructor (dealer) {
         super(dealer, 3)
     }
 
     validate (card) {
-        var trick = _.map(this.state.trickCards, Card.fromNumber)
-        var hand = _.map(this.players[this.state.currentPlayer].hand, Card.fromNumber)
+        var trick = _.map(this.trickCards, Card.fromNumber)
+        var hand = _.map(this.players[this.currentPlayer].hand, Card.fromNumber)
 
-        if (!this.state.trickCards.length) {
+        if (!this.trickCards.length) {
             if (_.some(hand, card => card.suit != 'Hearts')) {
                 return Card.fromNumber(card).suit != 'Hearts'
             }
@@ -180,53 +190,53 @@ class NoKingOfHearts extends Game {
     }
 
     updateScores () {
-        _.each(this.state.trickCards, card => {
+        _.each(this.trickCards, card => {
             if (card == 11) {
-                this.state.scores[this.state.currentPlayer] -= 20
-                this.state.terminal = true
+                this.scores[this.currentPlayer] -= 20
+                this.terminal = true
             }
         })
     }
 }
 
-class NoQueens extends Game {
+class NoQueens extends Contract {
     constructor (dealer) {
         super(dealer, 4)
-        this.state.queens = 0
+        this.queens = 0
     }
 
     updateScores () {
         var queens = [10, 23, 36, 49]
 
-        _.each(this.state.trickCards, card => {
+        _.each(this.trickCards, card => {
             if (_.includes(queens, card)) {
-                this.state.queens += 1
-                this.state.scores[this.state.currentPlayer] -= 6
+                this.queens += 1
+                this.scores[this.currentPlayer] -= 6
             }
         })
 
-        if (this.state.queens == 4) {
-            this.state.terminal = true
+        if (this.queens == 4) {
+            this.terminal = true
         }
     }
 }
 
-class NoLastTwo extends Game {
+class NoLastTwo extends Contract {
     constructor (dealer) {
         super(dealer, 5)
     }
 
     updateScores () {
         if (_.flatten(_.map(this.players, 'hand')).length < 8) {
-            this.state.scores[this.state.currentPlayer] -= 12
+            this.scores[this.currentPlayer] -= 12
         }
     }
 }
 
-class Domino extends Game {
+class Domino extends Contract {
     constructor (dealer) {
         super(dealer, 6)
-        this.state.domino = {
+        this.domino = {
             'Hearts': {
                 ace: false,
                 cards: []
@@ -244,23 +254,23 @@ class Domino extends Game {
                 cards: []
             },
         }
-        this.state.points = [45, 20, 10, -10]
+        this.points = [45, 20, 10, -10]
     }
 
     validate (card) {
         var playedCard = Card.fromNumber(card)
         
-        if (playedCard.value == this.state.startingValue) {
+        if (playedCard.value == this.startingValue) {
             return true
         }
 
-        var suitCards = _.map(this.state.domino[playedCard.suit].cards, Card.fromNumber)
+        var suitCards = _.map(this.domino[playedCard.suit].cards, Card.fromNumber)
 
         if (playedCard.value == 12) {
             return _.get(_.first(suitCards), 'value') == 0
         }
 
-        if (playedCard.value == 0 && this.state.domino[playedCard.suit].ace) {
+        if (playedCard.value == 0 && this.domino[playedCard.suit].ace) {
             return true
         }
 
@@ -275,11 +285,11 @@ class Domino extends Game {
     attachCard (card) {
         var playedCard = Card.fromNumber(card)
 
-        this.state.domino[playedCard.suit].ace = playedCard.value == 12
+        this.domino[playedCard.suit].ace = playedCard.value == 12
         
         if (playedCard.value != 12) {
-            this.state.domino[playedCard.suit].cards
-                = _.chain(this.state.domino[playedCard.suit].cards)
+            this.domino[playedCard.suit].cards
+                = _.chain(this.domino[playedCard.suit].cards)
                     .concat(card)
                     .sortBy()
                     .value()
@@ -297,66 +307,70 @@ class Domino extends Game {
         this.players = players
         
         // In domino, the first player is the one after the dealer
-        this.state.currentPlayer = (this.state.currentPlayer + 1) % 4
+        this.currentPlayer = (this.currentPlayer + 1) % 4
 
-        while (!this.state.terminal) {
-            broadcast(this.players, 'currentPlayer', this.state.currentPlayer)
+        while (!this.terminal) {
+            broadcast(this.players, 'currentPlayer', this.currentPlayer)
             
             // Check if the current player can play a card
             // If they can't, automatically pass the turn
-            if (this.canPlay(this.state.currentPlayer)) {
+            if (this.canPlay(this.currentPlayer)) {
 
                 // Ask current player for a card
-                var playedCard = await new Promise((resolve, reject) => {
-                    this.players[this.state.currentPlayer].socket.emit('turn', response => {
-                        resolve(response)
+                do {
+                    var playedCard = await new Promise((resolve, reject) => {
+                        this.players[this.currentPlayer].socket.emit('turn', response => {
+                            resolve(response)
+                        })
                     })
-                })
+                } while (playedCard === undefined)
 
                 // Validate played card
                 if (this.validate(playedCard)) {
                     
                     // Remove played card from the player's hand
-                    _.remove(this.players[this.state.currentPlayer].hand, card => card == playedCard)
+                    _.remove(this.players[this.currentPlayer].hand, card => card == playedCard)
                     
                     // Attach card to domino
                     this.attachCard(playedCard)
                     
                     // Update player's hand in the client
-                    this.players[this.state.currentPlayer].socket.emit('hand', this.players[this.state.currentPlayer].hand)
+                    this.players[this.currentPlayer].socket.emit('hand', this.players[this.currentPlayer].hand)
                     
                     // If the player has an empty hand, give them the highest available score
-                    if (!this.players[this.state.currentPlayer].hand.length) {
-                        this.state.scores[this.state.currentPlayer] = this.state.points.shift()
+                    if (!this.players[this.currentPlayer].hand.length) {
+                        this.scores[this.currentPlayer] = this.points.shift()
                     }
 
-                    this.state.currentPlayer = (this.state.currentPlayer + 1) % 4
+                    this.currentPlayer = (this.currentPlayer + 1) % 4
 
-                    broadcast(this.players, 'domino', this.state.domino)
+                    broadcast(this.players, 'domino', this.domino)
 
                     // If everyone has an empty hand, the state is terminal
                     if (!_.flatten(_.map(players, 'hand')).length) {
-                        this.state.terminal = true
+                        this.terminal = true
                     }
                 
                 } else {
-                    this.players[this.state.currentPlayer].socket.emit('log', 'Card not valid.')
+                    this.players[this.currentPlayer].socket.emit('log', 'Card not valid.')
                 }
 
             } else {
                 
-                _.map(this.players, player => player.socket.emit('log', this.players[this.state.currentPlayer].username + ' passed!'))
-                this.state.currentPlayer = (this.state.currentPlayer + 1) % 4
+                _.map(this.players, player => player.socket.emit('log', this.players[this.currentPlayer].username + ' passed!'))
+                this.currentPlayer = (this.currentPlayer + 1) % 4
             
             }
         }
 
-        return this.state.scores
+        return this.scores
     }
 }
 
-function createGame (game) {
-    const games = [
+
+
+function createContract (contract) {
+    const contracts = [
         Atout,
         NoTricks,
         NoHearts,
@@ -366,10 +380,12 @@ function createGame (game) {
         Domino
     ]
 
-    return new games[game]
+    return new contracts[contract]
 }
 
-global.Game = Game
+
+
+global.Contract = Contract
 global.Atout = Atout
 global.NoTricks  = NoTricks  
 global.NoHearts = NoHearts
@@ -377,4 +393,4 @@ global.NoKingOfHearts = NoKingOfHearts
 global.NoQueens = NoQueens
 global.NoLastTwo = NoLastTwo
 global.Domino = Domino
-global.createGame = createGame
+global.createContract = createContract

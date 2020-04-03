@@ -38,16 +38,7 @@ class Deck {
     }
 }
 
-class Player {
-    constructor (username, socket = {}) {
-        this.username = username
-        this.socket = socket
-        this.score = 0
-        this.hand = []
-        this.playableCards = [] // TODO
-        this.playedGames = _.times(7, () => false)
-    }
-}
+
 
 function isNewWinner (newCard, winningCard, trumpSuit) {
     if (!winningCard) {
@@ -83,9 +74,10 @@ function broadcast (players, eventName, ...args) {
     _.map(players, player => player.socket.emit(eventName, ...args))
 }
 
+
+
 global.Card = Card
 global.Deck = Deck
-global.Player = Player
 global.isNewWinner = isNewWinner
 global.getTrickWinner = getTrickWinner
 global.broadcast = broadcast

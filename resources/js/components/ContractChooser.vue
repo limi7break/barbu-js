@@ -1,15 +1,21 @@
 <template>
-    <div id="game-chooser" class="ui mini modal">
+    <div id="contract-chooser" class="ui mini modal">
         <div class="header">
-            Choose game
+            Choose contract
         </div>
         <div class="content">
             <div class="ui link list">
-                <a v-for="game, index in games"
+                <a v-for="contract, index in contracts"
                    class="item"
-                   :class="{ disabled: playedGames[index] }"
+                   :class="{ disabled: playedContracts[index] }"
                    @click="select(index)">
-                    {{ game }}
+                    {{ contract }}
+                </a>
+                <a 
+                   class="item"
+                   
+                   @click="select('disconnected')">
+                    disconnected
                 </a>
             </div>
         </div>
@@ -17,13 +23,13 @@
 </template>
 
 <script>
-    import { games } from '@/constants'
+    import { contracts } from '@/constants'
 
     export default {
-        props: ['playedGames'],
+        props: ['playedContracts'],
 
         created () {
-            this.games = games
+            this.contracts = contracts
         },
 
         data () {
@@ -35,7 +41,7 @@
         methods: {
             init (callback) {
                 this.callback = callback
-                $('#game-chooser').modal({
+                $('#contract-chooser').modal({
                     closable: false,
                     dimmerSettings: { opacity: 0 }
                 }).modal('show')
@@ -43,14 +49,14 @@
 
             select (value) {
                 this.callback(value)
-                $('#game-chooser').modal('hide')
+                $('#contract-chooser').modal('hide')
             }
         }
     }
 </script>
 
 <style>
-    #game-chooser .disabled.item {
+    #contract-chooser .disabled.item {
         text-decoration: line-through;
     }
 </style>

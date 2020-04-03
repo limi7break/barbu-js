@@ -7,8 +7,8 @@
             <div class="ui grid">
                 <div class="row">
                     <div class="six wide column">
-                        <h4 class="ui header">Remaining games</h4>
-                        <div v-for="element in _.zip(games, playedGames)" v-if="!element[1]">
+                        <h4 class="ui header">Remaining contracts</h4>
+                        <div v-for="element in _.zip(contracts, playedGames)" v-if="!element[1]">
                             {{ element[0] }}
                         </div>
                     </div>
@@ -25,13 +25,13 @@
 </template>
 
 <script>
-    import { games } from '@/constants'
+    import { contracts } from '@/constants'
 
     export default {
         props: ['playedGames', 'players', 'dealer', 'dealerDoubled'],
 
         created () {
-            this.games = games
+            this.contracts = contracts
         },
 
         methods: {

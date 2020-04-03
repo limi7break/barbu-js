@@ -1,64 +1,102 @@
 <template>
     <div id="app" class="ui grid">
-        <div class="sixteen wide tablet twelve wide computer column">
-            <div class="table row">
-                <Table :game="game"
-                       :players="players"
-                       :scores="scores"
-                       :matrix="matrix"
-                       :trickCards="trickCards"
-                       :firstPlayer="firstPlayer"
-                       :trumpSuit="trumpSuit"
-                       :startingValue="startingValue"
-                       :domino="domino"
-                       @score="score"
-                       @info="info"
-                       />
+        <template v-if="room">
+            <div class="sixteen wide tablet twelve wide computer column">
+                <div class="table row">
+                    <Table :contract="contract"
+                           :players="players"
+                           :scores="scores"
+                           :matrix="matrix"
+                           :trickCards="trickCards"
+                           :firstPlayer="firstPlayer"
+                           :trumpSuit="trumpSuit"
+                           :startingValue="startingValue"
+                           :domino="domino"
+                           @score="score"
+                           @info="info"
+                           />
+                </div>
+                <div class="cards row">
+                    <Cards :hand="hand"
+                           @play="play"
+                           />
+                </div>
             </div>
-            <div class="cards row">
-                <Cards :hand="hand"
-                       @play="play"
-                       />
+            <div class="four wide computer only column">
+                <Sidebar ref="sidebar" :logs="logs" />
             </div>
-        </div>
-        <div class="four wide computer only column">
-            <Sidebar ref="sidebar" :logs="logs" />
-        </div>
-        
-        <GameChooser ref="game-chooser"
-                     :playedGames="playedGames"
-                     />
-        <TrumpSuitChooser ref="trump-suit-chooser" />
-        <StartingValueChooser ref="starting-value-chooser" />
-        <DoublingChooser ref="doubling-chooser"
-                         :game="game"
+            
+            <ContractChooser ref="contract-chooser"
+                             :playedContracts="playedContracts"
+                             />
+            <TrumpSuitChooser ref="trump-suit-chooser" />
+            <StartingValueChooser ref="starting-value-chooser" />
+            <DoublingChooser ref="doubling-chooser"
+                             :contract="contract"
+                             :players="players"
+                             :matrix="matrix"
+                             :me="me"
+                             :dealer="dealer"
+                             :forceDealer="me != dealer
+                                        && _.sum(playedContracts) > 5
+                                        && dealerDoubled[me] < 2"
+                             />
+            <ScoresModal ref="scores-modal"
                          :players="players"
-                         :matrix="matrix"
-                         :me="me"
-                         :dealer="dealer"
-                         :forceDealer="me != dealer
-                                    && _.sum(playedGames) > 5
-                                    && dealerDoubled[me] < 2"
+                         :history="history"
                          />
-        <ScoresModal ref="scores-modal"
-                     :players="players"
-                     :history="history"
-                     />
-        <InfoModal ref="info-modal"
-                   :playedGames="playedGames"
-                   :players="players"
-                   :dealer="dealer"
-                   :dealerDoubled="dealerDoubled"
-                   />
+            <InfoModal ref="info-modal"
+                       :playedContracts="playedContracts"
+                       :players="players"
+                       :dealer="dealer"
+                       :dealerDoubled="dealerDoubled"
+                       />
+        </template>
+        <template v-else>
+            <div class="rooms row">
+                <div class="rooms column">
+                    <h2 class="ui dividing header">Rooms</h2>
+                    <div v-if="!_.isEmpty(rooms)" class="ui divided list">
+                        <a v-for="numPlayers, name in rooms" class="item" @click="$socket.client.emit('join', name)">
+                            <i class="door open icon"></i>
+                            <div class="content">
+                                <div class="header">{{ name }}</div>
+                                <div class="description">
+                                    {{ numPlayers }} players
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div v-else class="ui placeholder segment">
+                        <div class="ui icon header">
+                            <i class="door closed icon"></i>
+                            No rooms available.
+                        </div>
+                    </div>
+                    <div class="ui hidden divider"></div>
+                    <form class="ui form" @submit.prevent="$socket.client.emit('join', $refs.room.value)">
+                        <div class="field">
+                            <div class="ui left icon input">
+                                <i class="user icon"></i>
+                                <input ref="room" type="text" placeholder="Room name" autofocus>
+                            </div>
+                        </div>
+                        <button class="ui fluid large red submit button">
+                            Create!
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </template>
     </div>
 </template>
 
 <script>
-    import { games } from '@/constants'
+    import { contracts } from '@/constants'
     import Table from '@/components/Table.vue'
     import Cards from '@/components/Cards.vue'
     import Sidebar from '@/components/Sidebar.vue'
-    import GameChooser from '@/components/GameChooser.vue'
+    import ContractChooser from '@/components/ContractChooser.vue'
     import TrumpSuitChooser from '@/components/TrumpSuitChooser.vue'
     import StartingValueChooser from '@/components/StartingValueChooser.vue'
     import DoublingChooser from '@/components/DoublingChooser.vue'
@@ -72,7 +110,7 @@
             Table,
             Cards,
             Sidebar,
-            GameChooser,
+            ContractChooser,
             TrumpSuitChooser,
             StartingValueChooser,
             DoublingChooser,
@@ -81,23 +119,39 @@
         },
 
         created () {
-            this.games = games
+            this.contracts = contracts
         },
 
         data () {
             return {
+                rooms: {},
+                room: null,
+
+                /*
+                 * Data related to the whole game
+                 */
                 players: [],
                 scores: _.times(4, () => 0),
                 history: _.times(4, () => [0]),
+                me: null,
 
-                matrix: _.times(4, () => _.times(4, () => 0)),
+                /*
+                 * Data related to the current dealer
+                 */
+                dealer: null,
                 dealerDoubled: _.times(4, () => 0),
-                dealer: 0,
-                game: null,
-                firstPlayer: 0,
-                currentPlayer: 0,
+                
+                /*
+                 * Data related to the current contract
+                 */
+                contract: null,
+                matrix: _.times(4, () => _.times(4, () => 0)),
+                firstPlayer: null,
+                currentPlayer: null,
                 trickCards: [],
+                
                 trumpSuit: null,            // for Atout
+                
                 startingValue: null,        // for Domino
                 domino: {
                     'Hearts': {
@@ -118,12 +172,16 @@
                     },
                 },
 
-                me: 0,
+                /*
+                 * Data related to the player
+                 */
                 hand: [],
-                playedGames: _.times(7, () => false),
-
+                playedContracts: _.times(7, () => false),
                 callback: () => null,
                 
+                /*
+                 * Other data
+                 */
                 logs: []
             }
         },
@@ -137,8 +195,38 @@
                 this.log(username + ' disconnected.')
             },
 
-            state (state) {
+            rooms (rooms) {
+                this.rooms = rooms
+            },
 
+            room (room) {
+                this.room = room
+            },
+
+            init (data) {
+                this.room = data.room
+                
+                this.players = data.players
+                this.scores = data.scores
+                this.history = data.history
+                this.me = data.me
+
+                this.dealer = data.dealer
+                this.dealerDoubled = data.dealerDoubled
+
+                this.contract = data.contract
+                this.matrix = data.matrix
+                this.firstPlayer = data.firstPlayer
+                this.currentPlayer = data.currentPlayer
+                this.trickCards = data.trickCards
+
+                this.trumpSuit = data.trumpSuit
+
+                this.startingValue = data.startingValue
+                this.domino = data.domino
+
+                this.hand = data.hand
+                this.playedContracts = data.playedContracts
             },
 
             me (playerIndex) {
@@ -153,24 +241,24 @@
                 this.hand = hand
             },
 
-            playedGames (playedGames) {
-                this.playedGames = playedGames
+            playedContracts (playedContracts) {
+                this.playedContracts = playedContracts
             },
 
-            chooseGame (callback) {
-                this.$refs['game-chooser'].init(callback)
+            chooseContract (callback) {
+                this.$nextTick(() => this.$refs['contract-chooser'].init(callback))
             },
 
             dealer (dealer) {
                 this.dealer = dealer
             },
 
-            game (game) {
-                this.game = game
+            contract (contract) {
+                this.contract = contract
             },
 
             chooseTrumpSuit (callback) {
-                this.$refs['trump-suit-chooser'].init(callback)
+                this.$nextTick(() => this.$refs['trump-suit-chooser'].init(callback))
             },
 
             trumpSuit (trumpSuit) {
@@ -178,7 +266,7 @@
             },
 
             chooseStartingValue (callback) {
-                this.$refs['starting-value-chooser'].init(callback)
+                this.$nextTick(() => this.$refs['starting-value-chooser'].init(callback))
             },
 
             startingValue (startingValue) {
@@ -186,7 +274,7 @@
             },
 
             chooseDoubling (callback) {
-                this.$refs['doubling-chooser'].init(callback)
+                this.$nextTick(() => this.$refs['doubling-chooser'].init(callback))
             },
 
             matrix (matrix) {
@@ -198,7 +286,7 @@
             },
 
             chooseRedoubling (callback) {
-                this.$refs['doubling-chooser'].init(callback, true)
+                this.$nextTick(() => this.$refs['doubling-chooser'].init(callback, true))
             },
 
             currentPlayer (playerIndex) {
@@ -221,12 +309,15 @@
                 this.domino = domino
             },
 
-            gameScores (scores) {
-                this.log('<b>' + this.games[this.game] + ' finished! Scores:</b>')
+            contractScores (scores) {
+                this.log('<b>' + this.contracts[this.contract] + ' finished! Scores:</b>')
                 _.each(scores, (score, playerIndex) => {
-                    this.history[playerIndex].push(this.history[playerIndex].slice(-1)[0] + score)
                     this.log('<b>' + this.players[playerIndex] + ': ' + score + '</b>')
                 })
+            },
+
+            history (history) {
+                this.history = history
             },
 
             resetTable () {
@@ -296,6 +387,10 @@
         background-color: #ce6868;
     }
 
+    input {
+        background-color: #ffd7d7;
+    }
+
     #app {
         background-color: #e79292;
     }
@@ -316,5 +411,18 @@
 
     .cards.row {
         height: 30%;
+    }
+
+    .rooms.row {
+        justify-content: center !important;
+        align-content: center;
+    }
+
+    .rooms.column {
+        max-width: 450px;
+    }
+
+    .rooms.column > .placeholder.segment {
+        background-color: lightgray;
     }
 </style>

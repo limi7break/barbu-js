@@ -28,7 +28,7 @@
 
 <script>
     export default {
-        props: ['game', 'players', 'matrix', 'me', 'dealer', 'forceDealer'],
+        props: ['contract', 'players', 'matrix', 'me', 'dealer', 'forceDealer'],
 
         data () {
             return {
@@ -59,7 +59,7 @@
                 if (!this.redoubling) {
                     return (me == other)
                         || (me == this.dealer)
-                        || (this.game == 6 && other != this.dealer)
+                        || (this.contract == 6 && other != this.dealer)
                 } else {
                     return !this.doubledBy(me, other)
                 }

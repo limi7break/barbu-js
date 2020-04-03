@@ -14,9 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
 
-var users = {
-    'd10cfe44-b43a-4e16-9f61-f369b94492bd': 'admin'
-}
+var users = {}
 
 app.get('/', (req, res) => {
     if (req.cookies.barbu === undefined) {
@@ -47,10 +45,10 @@ app.get('/barbu', (req, res) => {
 })
 
 app.post('/login', (req, res) => {
-    let id = uuid.v4()
-    let username = req.body.username
+    var id = uuid.v4()
+    var username = req.body.username
 
-    if (!username || username.length > 16) {
+    if (!username || username.length > 16 || _.includes(_.values(users), username)) {
         res.redirect('/')
     }
     
@@ -67,137 +65,185 @@ app.post('/login', (req, res) => {
 
 
 require('./core')
-require('./games')
+require('./players')
+require('./contracts')
 
-var players = []
-
-var started = false
-
-// Game logic
-
-async function start () {
-    started = true
-
-    // TODO: random starting dealer
-    var dealer = 0
-    var scores = _.times(4, () => 0)
-    
-    for (i in _.range(players.length)) {
+class Room {
+    constructor (name) {
+        this.name = name
+        this.started = false
         
-        var dealerDoubled = _.times(4, () => 0)
-        broadcast(players, 'dealerDoubled', dealerDoubled)
+        this.players = []
+        this.contract = null
+        
+        this.history = _.times(4, () => [0])
+        this.dealer = null
+        this.dealerDoubled = _.times(4, () => 0)
+    }
+}
+
+var rooms = {}
+
+async function startGame (room) {
+    room.started = true
+    room.dealer = 0
+    
+    for (i in _.range(room.players.length)) {
+        
+        broadcast(room.players, 'dealerDoubled', room.dealerDoubled)
         
         for (j in _.range(7)) {
             
-            scores = await play(dealer, dealerDoubled)
+            var scores = await playContract(room)
+            broadcast(room.players, 'contractScores', scores)
             
-            _.each(players, (player, playerIndex) => player.score += scores[playerIndex])
-            broadcast(players, 'gameScores', scores)
-            broadcast(players, 'totalScores', _.map(players, 'score'))
-            broadcast(players, 'resetTable')
-            broadcast(players, 'matrix', _.times(4, () => _.times(4, () => 0)))
+            _.each(scores, (score, playerIndex) => {
+                room.history[playerIndex].push(room.history[playerIndex].slice(-1)[0] + score)  
+            })
+            broadcast(room.players, 'history', room.history)
+
+            _.each(room.players, (player, playerIndex) => player.score += scores[playerIndex])
+            broadcast(room.players, 'totalScores', _.map(room.players, 'score'))
+            
+            broadcast(room.players, 'resetTable')
+            broadcast(room.players, 'matrix', _.times(4, () => _.times(4, () => 0)))
         
         }
         
-        dealer = dealer + 1
-        broadcast(players, 'dealer', dealer)
-        broadcast(players, 'playedGames', _.times(7, () => false))
+        room.dealer = room.dealer + 1
+        broadcast(room.players, 'dealer', room.dealer)
+        broadcast(room.players, 'playedContracts', _.times(7, () => false))
     
     }
 
-    io.emit('end')
-
-    started = false
+    broadcast(room.players, 'end')
 }
 
-async function play (dealer, dealerDoubled) {
+async function playContract (room) {
 
-    var game = null
     var deck = new Deck()
 
     // Distribute cards and send hand to players
-    players = _.map(players, player => _.assign(player, { hand: _.sortBy(deck.draw(13)) }))
-    _.map(players, player => player.socket.emit('hand', player.hand))
+    room.players = _.map(room.players, player => _.assign(player, { hand: _.sortBy(deck.draw(13)) }))
+    _.map(room.players, player => player.socket.emit('hand', player.hand))
 
-    // Ask dealer to choose the game
-    await new Promise((resolve, reject) => 
-        players[dealer].socket.emit('chooseGame', response => {
-            game = createGame(response)
-            io.emit('game', response)
-            players[dealer].playedGames[response] = true
-            broadcast(players, 'playedGames', players[dealer].playedGames)
-            resolve()
-        })
-    )
+    // Ask dealer to choose the contract
+    do {
+        var response = await new Promise((resolve, reject) =>
+            room.players[room.dealer].socket.emit('chooseContract', response => {
+                if (response === undefined) {
+                    resolve(response)
+                    return response
+                }
 
-    if (game.state.game == 0) {
+                room.contract = createContract(response)
+                broadcast(room.players, 'contract', response)
+                
+                room.players[room.dealer].playedContracts[response] = true
+                broadcast(room.players, 'playedContracts', room.players[room.dealer].playedContracts)
+                
+                resolve(response)
+            })
+        )
+    } while (response === undefined)
+
+    if (room.contract.contract == 0) {
         // Atout: ask dealer to choose the trump suit
-        await new Promise((resolve, reject) => 
-            players[dealer].socket.emit('chooseTrumpSuit', response => {
-                game.state.trumpSuit = response
-                game.state.startingValue = null
-                io.emit('trumpSuit', response)
-                io.emit('startingValue', null)
-                resolve()
-            })
-        )
-    } else if (game.state.game == 6) {
+        do {
+            var response = await new Promise((resolve, reject) => 
+                room.players[room.dealer].socket.emit('chooseTrumpSuit', response => {
+                    if (response === undefined) {
+                        resolve(response)
+                        return response
+                    }
+
+                    room.contract.trumpSuit = response
+                    room.contract.startingValue = null
+                    broadcast(room.players, 'trumpSuit', response)
+                    broadcast(room.players, 'startingValue', null)
+                    resolve(response)
+                })
+            )
+        } while (response === undefined)
+    } else if (room.contract.contract == 6) {
         // Domino: ask dealer to choose the starting value
-        await new Promise((resolve, reject) => 
-            players[dealer].socket.emit('chooseStartingValue', response => {
-                game.state.trumpSuit = null
-                game.state.startingValue = response
-                io.emit('trumpSuit', null)
-                io.emit('startingValue', response)
-                resolve()
-            })
-        )
+        do {
+            var response = await new Promise((resolve, reject) => 
+                room.players[room.dealer].socket.emit('chooseStartingValue', response => {
+                    if (response === undefined) {
+                        resolve(response)
+                        return response
+                    }
+
+                    room.contract.trumpSuit = null
+                    room.contract.startingValue = response
+                    broadcast(room.players, 'trumpSuit', null)
+                    broadcast(room.players, 'startingValue', response)
+                    resolve(response)
+                })
+            )
+        } while (response === undefined)
+        
     } else {
-        game.state.trumpSuit = null
-        game.state.startingValue = null
-        io.emit('trumpSuit', null)
-        io.emit('startingValue', null)
+        room.contract.trumpSuit = null
+        room.contract.startingValue = null
+        broadcast(room.players, 'trumpSuit', null)
+        broadcast(room.players, 'startingValue', null)
     }
 
     // Doubling phase
-    io.emit('matrix', game.state.matrix)
-    game.state.currentPlayer = (dealer + 1) % 4
+    broadcast(room.players, 'matrix', room.contract.matrix)
+    room.contract.currentPlayer = (room.dealer + 1) % 4
 
     for (i in _.range(4)) {
-        await new Promise((resolve, reject) => 
-            players[game.state.currentPlayer].socket.emit('chooseDoubling', response => {
-                game.state.matrix[game.state.currentPlayer] = response
-                
-                if (response[dealer]) {
-                    dealerDoubled[game.state.currentPlayer] += 1
-                    broadcast(players, 'dealerDoubled', dealerDoubled)
-                }
+        do {
+            var response = await new Promise((resolve, reject) => 
+                room.players[room.contract.currentPlayer].socket.emit('chooseDoubling', response => {
+                    if (response === undefined) {
+                        resolve(response)
+                        return response
+                    }
 
-                io.emit('matrix', game.state.matrix)
-                resolve()
-            })
-        )
+                    room.contract.matrix[room.contract.currentPlayer] = response
+                    
+                    if (response[room.dealer]) {
+                        room.dealerDoubled[room.contract.currentPlayer] += 1
+                        broadcast(room.players, 'dealerDoubled', room.dealerDoubled)
+                    }
 
-        game.state.currentPlayer = (game.state.currentPlayer + 1) % 4
+                    broadcast(room.players, 'matrix', room.contract.matrix)
+                    resolve(response)
+                })
+            )
+        } while (response === undefined)
+
+        room.contract.currentPlayer = (room.contract.currentPlayer + 1) % 4
     }
 
     // Redoubling phase
     for (i in _.range(4)) {
-        await new Promise((resolve, reject) => 
-            players[game.state.currentPlayer].socket.emit('chooseRedoubling', response => {
-                game.state.matrix[game.state.currentPlayer] = response
-                io.emit('matrix', game.state.matrix)
-                resolve()
-            })
-        )
+        do {
+            var response = await new Promise((resolve, reject) => 
+                room.players[room.contract.currentPlayer].socket.emit('chooseRedoubling', response => {
+                    if (response === undefined) {
+                        resolve(response)
+                        return response
+                    }
+                    
+                    room.contract.matrix[room.contract.currentPlayer] = response
+                    broadcast(room.players, 'matrix', room.contract.matrix)
+                    resolve(response)
+                })
+            )
+        } while (response === undefined)
 
-        game.state.currentPlayer = (game.state.currentPlayer + 1) % 4
+        room.contract.currentPlayer = (room.contract.currentPlayer + 1) % 4
     }
 
-    game.state.firstPlayer   = dealer
-    game.state.currentPlayer = dealer
+    room.contract.firstPlayer   = room.dealer
+    room.contract.currentPlayer = room.dealer
 
-    var scores = await game.play(players)
+    var scores = await room.contract.play(room.players)
 
     // Calculate doubling
     var adjusted = [...scores]
@@ -206,8 +252,8 @@ async function play (dealer, dealerDoubled) {
         var others = _.filter(_.range(4), n => n != playerIndex)
         _.each(others, otherIndex => {
             var value = Math.max(
-                game.state.matrix[playerIndex][otherIndex],
-                game.state.matrix[otherIndex][playerIndex]
+                room.contract.matrix[playerIndex][otherIndex],
+                room.contract.matrix[otherIndex][playerIndex]
             )
             if (value) {
                 var adjustment = value * (scores[playerIndex] - scores[otherIndex])
@@ -222,6 +268,49 @@ async function play (dealer, dealerDoubled) {
 
 // Socket event handlers
 
+function getRoom (username) {
+    return _.find(rooms, room => _.find(room.players, ['username', username]))
+}
+
+function getPlayer (username) {
+    return _.find(getRoom(username).players, ['username', username])
+}
+
+function init (username, socket) {
+    var room = getRoom(username)
+    var player = getPlayer(username)
+
+    var acks = player.socket.acks
+    _.assign(player, { socket: socket })
+    _.map(acks, (ack, index) => ack(undefined))
+
+    socket.emit('init', {
+        room: room.name,
+
+        players: _.map(room.players, 'username'),
+        scores: _.map(room.players, 'score'),
+        history: room.history,
+        me: _.findIndex(room.players, ['username', username]),
+
+        dealer: room.dealer,
+        dealerDoubled: room.dealerDoubled,
+
+        contract: room.contract ? room.contract.contract : null,
+        matrix: room.contract ? room.contract.matrix : _.times(4, () => _.times(4, () => 0)),
+        firstPlayer: room.contract ? room.contract.firstPlayer : null,
+        currentPlayer: room.contract ? room.contract.currentPlayer : null,
+        trickCards: room.contract ? room.contract.trickCards : [],
+        
+        trumpSuit: room.contract ? room.contract.trumpSuit : null,
+        
+        startingValue: room.contract ? room.contract.startingValue : null,
+        domino: room.contract ? room.contract.domino : {},
+
+        hand: player.hand,
+        playedContracts: player.playedContracts
+    })
+}
+
 io.on('connection', (socket) => {
     var regex = /barbu=([0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12})/i
     var match = regex.exec(socket.handshake.headers.cookie)
@@ -232,30 +321,42 @@ io.on('connection', (socket) => {
         return
     }
 
-    io.emit('connected', username)
-
     console.log(username, 'connected. Socket id:', socket.id)
 
-    var playerIndex = _.findIndex(players, ['username', username])
+    socket.emit('rooms', _.mapValues(rooms, room => room.players.length))
 
-    if (playerIndex != -1) {
-        // Update socket
-        _.assign(players[playerIndex], { socket: socket })
-    } else {
-        // New player
-        playerIndex = players.length
+    if (getRoom(username)) {
+        init(username, socket)
+    }
+
+    socket.on('join', name => {
+        if (!_.has(rooms, name)) {
+            rooms[name] = new Room(name)
+        }
+
+        var room = rooms[name]
+        var playerIndex = room.players.length
+        socket.emit('room', room.name)
         socket.emit('me', playerIndex)
-        players.push(new Player(username, socket))
-    }
+        room.players.push(new HumanPlayer(username, socket))
+        broadcast(room.players, 'players', _.map(room.players, 'username'))
+        broadcast(room.players, 'connected', username)
 
-    io.emit('players', _.map(players, 'username'))
+        console.log(username, 'joined room', name)
 
-    if (players.length == 4 && !started) {
-        start()
-    }
+        io.emit('rooms', _.mapValues(rooms, room => room.players.length))
+
+        if (room.players.length == 4 && !room.started) {
+            startGame(room)
+        }
+    })
 
     socket.on('disconnect', () => {
-        io.emit('disconnected', username)
+        let room = getRoom(username)
+        
+        if (room) {
+            broadcast(room.players, 'disconnected', username)
+        }
     })
 })
 
