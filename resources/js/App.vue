@@ -39,7 +39,7 @@
                              :me="me"
                              :dealer="dealer"
                              :forceDealer="me != dealer
-                                        && _.sum(playedContracts) > 5
+                                        && _.sum(playedContracts) > 6
                                         && dealerDoubled[me] < 2"
                              />
             <ScoresModal ref="scores-modal"
