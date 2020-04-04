@@ -90,6 +90,10 @@ async function startGame (room) {
     
     for (i in _.range(room.players.length)) {
         
+        broadcast(room.players, 'dealer', room.dealer)
+        broadcast(room.players, 'playedContracts', room.players[room.dealer].playedContracts)
+
+        this.dealerDoubled = _.times(4, () => 0)
         broadcast(room.players, 'dealerDoubled', room.dealerDoubled)
         
         for (j in _.range(7)) {
@@ -111,8 +115,6 @@ async function startGame (room) {
         }
         
         room.dealer = room.dealer + 1
-        broadcast(room.players, 'dealer', room.dealer)
-        broadcast(room.players, 'playedContracts', _.times(7, () => false))
     
     }
 
