@@ -71,7 +71,6 @@ require('./contracts')
 class Room {
     constructor (name) {
         this.name = name
-        this.started = false
         
         this.players = []
         this.contract = null
@@ -79,22 +78,28 @@ class Room {
         this.history = _.times(4, () => [0])
         this.dealer = null
         this.dealerDoubled = _.times(4, () => 0)
+        this.playedContracts = _.times(7, () => false)
+
+        this.finished = false
     }
 }
 
 var rooms = {}
 
 async function startGame (room) {
-    room.started = true
-    room.dealer = 0
+    room.finished = false
+    room.dealer = -1
     
     for (i in _.range(room.players.length)) {
         
+        room.dealer = room.dealer + 1
         broadcast(room.players, 'dealer', room.dealer)
-        broadcast(room.players, 'playedContracts', room.players[room.dealer].playedContracts)
-
-        this.dealerDoubled = _.times(4, () => 0)
+        
+        room.dealerDoubled = _.times(4, () => 0)
         broadcast(room.players, 'dealerDoubled', room.dealerDoubled)
+
+        room.playedContracts = _.times(7, () => false)
+        broadcast(room.players, 'playedContracts', room.playedContracts)
         
         for (j in _.range(7)) {
             
@@ -113,12 +118,11 @@ async function startGame (room) {
             broadcast(room.players, 'matrix', _.times(4, () => _.times(4, () => 0)))
         
         }
-        
-        room.dealer = room.dealer + 1
     
     }
 
     broadcast(room.players, 'end')
+    room.finished = true
 }
 
 async function playContract (room) {
@@ -141,8 +145,8 @@ async function playContract (room) {
                 room.contract = createContract(response)
                 broadcast(room.players, 'contract', response)
                 
-                room.players[room.dealer].playedContracts[response] = true
-                broadcast(room.players, 'playedContracts', room.players[room.dealer].playedContracts)
+                room.playedContracts[response] = true
+                broadcast(room.players, 'playedContracts', room.playedContracts)
                 
                 resolve(response)
             })
@@ -167,6 +171,7 @@ async function playContract (room) {
                 })
             )
         } while (response === undefined)
+    
     } else if (room.contract.contract == 6) {
         // Domino: ask dealer to choose the starting value
         do {
@@ -195,7 +200,9 @@ async function playContract (room) {
 
     // Doubling phase
     broadcast(room.players, 'matrix', room.contract.matrix)
+    
     room.contract.currentPlayer = (room.dealer + 1) % 4
+    broadcast(room.players, 'currentPlayer', room.contract.currentPlayer)
 
     for (i in _.range(4)) {
         do {
@@ -220,6 +227,7 @@ async function playContract (room) {
         } while (response === undefined)
 
         room.contract.currentPlayer = (room.contract.currentPlayer + 1) % 4
+        broadcast(room.players, 'currentPlayer', room.contract.currentPlayer)
     }
 
     // Redoubling phase
@@ -240,6 +248,7 @@ async function playContract (room) {
         } while (response === undefined)
 
         room.contract.currentPlayer = (room.contract.currentPlayer + 1) % 4
+        broadcast(room.players, 'currentPlayer', room.contract.currentPlayer)
     }
 
     room.contract.firstPlayer   = room.dealer
@@ -271,20 +280,21 @@ async function playContract (room) {
 // Socket event handlers
 
 function getRoom (username) {
-    return _.find(rooms, room => _.find(room.players, ['username', username]))
+    return _.find(rooms, room => !room.finished && _.find(room.players, ['username', username]))
 }
 
-function getPlayer (username) {
-    return _.find(getRoom(username).players, ['username', username])
-}
-
-function init (username, socket) {
+function reconnect (username, socket) {
     var room = getRoom(username)
-    var player = getPlayer(username)
+    var player = _.find(room.players, ['username', username])
 
+    // Get all the pending acks from the player's previous socket
     var acks = player.socket.acks
+    
+    // Replace the previous socket with the new one
     _.assign(player, { socket: socket })
-    _.map(acks, (ack, index) => ack(undefined))
+    
+    // Resolve every pending ack with undefined
+    _.map(acks, ack => ack(undefined))
 
     socket.emit('init', {
         room: room.name,
@@ -296,6 +306,7 @@ function init (username, socket) {
 
         dealer: room.dealer,
         dealerDoubled: room.dealerDoubled,
+        playedContracts: room.playedContracts,
 
         contract: room.contract ? room.contract.contract : null,
         matrix: room.contract ? room.contract.matrix : _.times(4, () => _.times(4, () => 0)),
@@ -306,11 +317,12 @@ function init (username, socket) {
         trumpSuit: room.contract ? room.contract.trumpSuit : null,
         
         startingValue: room.contract ? room.contract.startingValue : null,
-        domino: room.contract ? room.contract.domino : {},
+        domino: room.contract ? room.contract.domino : EMPTY_DOMINO,
 
-        hand: player.hand,
-        playedContracts: player.playedContracts
+        hand: player.hand
     })
+
+    broadcast(room.players, 'reconnected', username)
 }
 
 io.on('connection', (socket) => {
@@ -325,31 +337,41 @@ io.on('connection', (socket) => {
 
     console.log(username, 'connected. Socket id:', socket.id)
 
+    // Send rooms to the connected player
     socket.emit('rooms', _.mapValues(rooms, room => room.players.length))
 
+    // If the player is already in a not finished room:
+    //      - update the socket with the new one
+    //      - discard all pending acks, if any
+    //      - send them the current game state
     if (getRoom(username)) {
-        init(username, socket)
+        reconnect(username, socket)
     }
 
     socket.on('join', name => {
+        // If the room does not exist, create it
         if (!_.has(rooms, name)) {
             rooms[name] = new Room(name)
         }
 
         var room = rooms[name]
         var playerIndex = room.players.length
-        socket.emit('room', room.name)
-        socket.emit('me', playerIndex)
-        room.players.push(new HumanPlayer(username, socket))
-        broadcast(room.players, 'players', _.map(room.players, 'username'))
-        broadcast(room.players, 'connected', username)
 
-        console.log(username, 'joined room', name)
+        // If the room is already full, do nothing
+        if (playerIndex < 4) {
+            socket.emit('room', room.name)
+            socket.emit('me', playerIndex)
+            room.players.push(new HumanPlayer(username, socket))
+            broadcast(room.players, 'players', _.map(room.players, 'username'))
+            broadcast(room.players, 'connected', username)
 
-        io.emit('rooms', _.mapValues(rooms, room => room.players.length))
+            console.log(username, 'joined room', name)
 
-        if (room.players.length == 4 && !room.started) {
-            startGame(room)
+            io.emit('rooms', _.mapValues(rooms, room => room.players.length))
+
+            if (room.players.length == 4) {
+                startGame(room)
+            }
         }
     })
 

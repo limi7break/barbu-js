@@ -13,7 +13,7 @@ class Contract {
         this.trumpSuit = null           // for Atout
         
         this.startingValue = null       // for Domino
-        this.domino = {}
+        this.domino = EMPTY_DOMINO
         this.points = []
         
         this.hearts = null              // for No Hearts
@@ -236,24 +236,7 @@ class NoLastTwo extends Contract {
 class Domino extends Contract {
     constructor (dealer) {
         super(dealer, 6)
-        this.domino = {
-            'Hearts': {
-                ace: false,
-                cards: []
-            },
-            'Diamonds': {
-                ace: false,
-                cards: []
-            },
-            'Clubs': {
-                ace: false,
-                cards: []
-            },
-            'Spades': {
-                ace: false,
-                cards: []
-            },
-        }
+        this.domino = EMPTY_DOMINO
         this.points = [45, 20, 10, -10]
     }
 

@@ -5,8 +5,6 @@ class Player {
         this.username = username
         this.score = 0
         this.hand = []
-        this.playedContracts = _.times(7, () => false)
-        this.playableCards = [] // TODO
         this.socket = socket
     }
 }

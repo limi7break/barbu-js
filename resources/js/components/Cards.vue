@@ -36,16 +36,6 @@
         transform: scale(1.1);
     }
 
-    #cards .playable.card:hover {
-        -webkit-transform: scale(1.1);
-        -ms-transform: scale(1.1);
-        transform: scale(1.1);
-    }
-
-    #cards .playable.card {
-        margin-bottom: 1.5em;
-    }
-
     #cards.domino {
         background-color: #e79292;
     }

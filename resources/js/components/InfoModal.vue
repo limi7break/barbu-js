@@ -28,7 +28,7 @@
     import { contracts } from '@/constants'
 
     export default {
-        props: ['playedContracts', 'players', 'dealer', 'dealerDoubled'],
+        props: ['players', 'dealer', 'dealerDoubled', 'playedContracts'],
 
         created () {
             this.contracts = contracts

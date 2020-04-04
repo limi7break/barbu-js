@@ -7,8 +7,9 @@
                            :players="players"
                            :scores="scores"
                            :matrix="matrix"
-                           :trickCards="trickCards"
                            :firstPlayer="firstPlayer"
+                           :currentPlayer="currentPlayer"
+                           :trickCards="trickCards"
                            :trumpSuit="trumpSuit"
                            :startingValue="startingValue"
                            :domino="domino"
@@ -46,10 +47,10 @@
                          :history="history"
                          />
             <InfoModal ref="info-modal"
-                       :playedContracts="playedContracts"
                        :players="players"
                        :dealer="dealer"
                        :dealerDoubled="dealerDoubled"
+                       :playedContracts="playedContracts"
                        />
         </template>
         <template v-else>
@@ -140,6 +141,7 @@
                  */
                 dealer: null,
                 dealerDoubled: _.times(4, () => 0),
+                playedContracts: _.times(7, () => false),
                 
                 /*
                  * Data related to the current contract
@@ -176,7 +178,6 @@
                  * Data related to the player
                  */
                 hand: [],
-                playedContracts: _.times(7, () => false),
                 callback: () => null,
                 
                 /*
@@ -189,6 +190,10 @@
         sockets: {
             connected (username) {
                 this.log(username + ' connected.')
+            },
+
+            reconnected (username) {
+                this.log(username + ' reconnected.')
             },
 
             disconnected (username) {

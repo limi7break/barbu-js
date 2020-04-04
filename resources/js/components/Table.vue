@@ -48,7 +48,10 @@
                         <img class="card" :src="'/img/' + cards[3] + '.png'" :class="{ transparent: arrows }">
                     </div>
                     <div class="label">
-                        <label>{{ players[3] }}</label>
+                        <label>
+                            <i v-if="currentPlayer === 3" class="small user icon"></i>
+                            {{ players[3] }}
+                        </label>
                         <div class="glue"></div>
                     </div>
                 </div>
@@ -56,7 +59,10 @@
             <div class="six wide center aligned column">
                 <div class="top player">
                     <div class="label">
-                        <label>{{ players[2] }}</label>
+                        <label>
+                            <i v-if="currentPlayer === 2" class="small user icon"></i>
+                            {{ players[2] }}
+                        </label>
                         <div class="glue"></div>
                     </div>
                     <div class="card container">
@@ -70,7 +76,10 @@
                     </div>
                     <div class="label">
                         <div class="glue"></div>
-                        <label>{{ players[0] }}</label>
+                        <label>
+                            <i v-if="currentPlayer === 0" class="small user icon"></i>
+                            {{ players[0] }}
+                        </label>
                     </div>
                 </div>
             </div>
@@ -81,7 +90,10 @@
                     </div>
                     <div class="label">
                         <div class="glue"></div>
-                        <label>{{ players[1] }}</label>
+                        <label>
+                            {{ players[1] }}
+                            <i v-if="currentPlayer === 1" class="small user icon"></i>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -142,7 +154,18 @@
             Cards,
         },
 
-        props: ['contract', 'players', 'scores', 'matrix', 'trickCards', 'firstPlayer', 'trumpSuit', 'startingValue', 'domino'],
+        props: [
+            'contract',
+            'players',
+            'scores',
+            'matrix',
+            'firstPlayer',
+            'currentPlayer',
+            'trickCards',
+            'trumpSuit',
+            'startingValue',
+            'domino'
+        ],
 
         created () {
             this.contracts = contracts
