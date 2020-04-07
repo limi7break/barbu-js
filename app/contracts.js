@@ -268,14 +268,18 @@ class Domino extends Contract {
     attachCard (card) {
         var playedCard = Card.fromNumber(card)
 
-        this.domino[playedCard.suit].ace = playedCard.value == 12
+        if (playedCard.value == 12) {
         
-        if (playedCard.value != 12) {
+            this.domino[playedCard.suit].ace = true
+        
+        } else {
+        
             this.domino[playedCard.suit].cards
                 = _.chain(this.domino[playedCard.suit].cards)
                     .concat(card)
                     .sortBy()
                     .value()
+        
         }
     }
 

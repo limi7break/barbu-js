@@ -8,9 +8,10 @@
             </div>
             <div class="divider"></div>
             <div class="scores">
-                <template v-for="element in _.zip(players, scores)" v-if="element[0]">
+                <template v-for="element, index in _.zip(players, scores)" v-if="element[0]">
                     <div>
                         {{ element[0] }}
+                        <i v-if="contract == 6 && currentPlayer == index" class="small user icon"></i>
                     </div>
                     <div class="score">
                         {{ element[1] }}
