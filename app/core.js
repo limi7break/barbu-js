@@ -74,28 +74,8 @@ function broadcast (players, eventName, ...args) {
     _.map(players, player => player.socket.emit(eventName, ...args))
 }
 
-const EMPTY_DOMINO = {
-    'Hearts': {
-        ace: false,
-        cards: []
-    },
-    'Diamonds': {
-        ace: false,
-        cards: []
-    },
-    'Clubs': {
-        ace: false,
-        cards: []
-    },
-    'Spades': {
-        ace: false,
-        cards: []
-    },
-}
-
 global.Card = Card
 global.Deck = Deck
 global.isNewWinner = isNewWinner
 global.getTrickWinner = getTrickWinner
 global.broadcast = broadcast
-global.EMPTY_DOMINO = EMPTY_DOMINO

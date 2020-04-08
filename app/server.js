@@ -317,7 +317,24 @@ function reconnect (username, socket) {
         trumpSuit: room.contract ? room.contract.trumpSuit : null,
         
         startingValue: room.contract ? room.contract.startingValue : null,
-        domino: room.contract ? room.contract.domino : EMPTY_DOMINO,
+        domino: room.contract ? room.contract.domino : {
+            'Hearts': {
+                ace: false,
+                cards: []
+            },
+            'Diamonds': {
+                ace: false,
+                cards: []
+            },
+            'Clubs': {
+                ace: false,
+                cards: []
+            },
+            'Spades': {
+                ace: false,
+                cards: []
+            },
+        },
 
         hand: player.hand
     })
