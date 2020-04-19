@@ -42,7 +42,7 @@
                                         && (
                                             (_.sum(playedContracts) == 6 && dealerDoubled[me] == 0)
                                             ||
-                                            (_.sum(playedContracts) == 7 && dealerDoubled[me] < 1)
+                                            (_.sum(playedContracts) == 7 && dealerDoubled[me] == 1)
                                         )"
                              />
             <ScoresModal ref="scores-modal"

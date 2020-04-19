@@ -7,6 +7,8 @@ var app = express()
 var server = require('http').createServer(app)
 var io = require('socket.io')(server)
 
+var storage = require('node-persist')
+
 var bodyParser = require('body-parser')
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -14,16 +16,18 @@ app.use(bodyParser.urlencoded({ extended: true }))
 var cookieParser = require('cookie-parser')
 app.use(cookieParser())
 
+// Globals
+
 var users = {}
+var rooms = {}
+
+// Routes
 
 app.get('/', (req, res) => {
     if (req.cookies.barbu === undefined) {
         res.sendFile(path.resolve('public/login.html'))
     } else if (users[req.cookies.barbu] === undefined) {
-        res.cookie('barbu', '', {
-            expires: new Date(2020, 0, 1),
-            httpOnly: true
-        })
+        res.clearCookie('barbu')
         res.redirect('/')
     } else {
         res.redirect('/barbu')
@@ -34,10 +38,7 @@ app.get('/barbu', (req, res) => {
     if (req.cookies.barbu === undefined) {
         res.redirect('/')
     } else if (users[req.cookies.barbu] === undefined) {
-        res.cookie('barbu', '', {
-            expires: new Date(2020, 0, 1),
-            httpOnly: true
-        })
+        res.clearCookie('barbu')
         res.redirect('/')
     } else {
         res.sendFile(path.resolve('public/barbu.html'))
@@ -55,14 +56,14 @@ app.post('/login', (req, res) => {
     users[id] = username
 
     res.cookie('barbu', id, {
-        maxAge: 2147483647,
+        maxAge: 2147483647000,
         httpOnly: true
     })
 
     res.redirect('/barbu')
 })
 
-
+// Game logic
 
 require('./core')
 require('./players')
@@ -84,13 +85,11 @@ class Room {
     }
 }
 
-var rooms = {}
-
 async function startGame (room) {
     room.finished = false
     room.dealer = -1
     
-    for (i in _.range(room.players.length)) {
+    while (room.dealer < room.players.length - 1) {
         
         room.dealer = room.dealer + 1
         broadcast(room.players, 'dealer', room.dealer)
@@ -101,7 +100,7 @@ async function startGame (room) {
         room.playedContracts = _.times(7, () => false)
         broadcast(room.players, 'playedContracts', room.playedContracts)
         
-        for (j in _.range(7)) {
+        while (_.sum(room.playedContracts) < 7) {
             
             var scores = await playContract(room)
             broadcast(room.players, 'contractScores', scores)
@@ -288,7 +287,7 @@ function reconnect (username, socket) {
     var player = _.find(room.players, ['username', username])
 
     // Get all the pending acks from the player's previous socket
-    var acks = player.socket.acks
+    var acks = player.socket.acks || []
     
     // Replace the previous socket with the new one
     _.assign(player, { socket: socket })
@@ -401,6 +400,38 @@ io.on('connection', (socket) => {
     })
 })
 
-app.use(express.static(path.resolve('public')))
+// Save users and rooms on process exit
 
-server.listen(9000, () => console.log('[*] barbu.js listening on *:9000'))
+process.on('SIGINT', function() {
+    
+    Promise.all([
+        storage.setItem('users', users),
+        storage.setItem('rooms', rooms)
+    ])
+    .then(() => process.exit())
+
+});
+
+// Load users and rooms, then start the server
+
+storage.init({
+    
+    // Discard socket object when saving rooms
+    stringify: value => JSON.stringify(value, (k, v) => k === 'socket' ? {} : v)
+
+}).then(() => {
+    Promise.all([
+        storage.getItem('users', users),
+        storage.getItem('rooms', rooms)
+    ])
+    .then(results => {
+        
+        users = results[0] || {}
+        rooms = results[1] || {}
+
+        app.use(express.static(path.resolve('public')))
+
+        server.listen(9000, () => console.log('[*] barbu.js listening on *:9000'))
+
+    })
+})

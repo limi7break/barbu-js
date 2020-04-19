@@ -104,3 +104,4 @@ dist
 .tern-port
 
 public/js/app.js
+.node-persist

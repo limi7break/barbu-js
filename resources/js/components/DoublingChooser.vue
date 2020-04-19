@@ -17,7 +17,12 @@
                                type="checkbox"
                                :true-value="redoubling ? 2 : 1"
                                :false-value="0">
-                        <label>{{ player }}</label>
+                        <label>
+                            {{ player }}
+                            <span v-if="redoubling && redoubledBy(me, index)">redoubled you!</span>
+                            <span v-if="!redoubling && doubledBy(me, index)">doubled you!</span>
+                            <span v-if="!redoubling && index == dealer && forceDealer">(forced)</span>
+                        </label>
                     </div>
                 </div>
                 <button class="ui button" @click="select">OK</button>
