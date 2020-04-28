@@ -6,6 +6,7 @@
                     <Table :contract="contract"
                            :players="players"
                            :scores="scores"
+                           :dealer="dealer"
                            :matrix="matrix"
                            :firstPlayer="firstPlayer"
                            :currentPlayer="currentPlayer"
@@ -61,12 +62,16 @@
                 <div class="rooms column">
                     <h2 class="ui dividing header">Rooms</h2>
                     <div v-if="!_.isEmpty(rooms)" class="ui divided list">
-                        <a v-for="numPlayers, name in rooms" class="item" @click="$socket.client.emit('join', name)">
+                        <a v-for="room, name in rooms" class="item"
+                           @click="() => room.finished ? oldScore(room) : $socket.client.emit('join', name)">
                             <i class="door open icon"></i>
                             <div class="content">
-                                <div class="header">{{ name }}</div>
+                                <div class="header">
+                                    {{ name }}
+                                    <i v-if="room.finished" class="small check icon"></i>
+                                </div>
                                 <div class="description">
-                                    {{ numPlayers }} players
+                                    {{ _.join(_.zipWith(room.players, room.scores, (player, score) => player + ': ' + score), ', ') }}
                                 </div>
                             </div>
                         </a>
@@ -77,7 +82,6 @@
                             No rooms available.
                         </div>
                     </div>
-                    <div class="ui hidden divider"></div>
                     <form class="ui form" @submit.prevent="$socket.client.emit('join', $refs.room.value)">
                         <div class="field">
                             <div class="ui left icon input">
@@ -91,6 +95,10 @@
                     </form>
                 </div>
             </div>
+            <ScoresModal ref="old-scores-modal"
+                         :players="oldPlayers"
+                         :history="oldHistory"
+                         />
         </template>
     </div>
 </template>
@@ -186,7 +194,10 @@
                 /*
                  * Other data
                  */
-                logs: []
+                oldPlayers: [],
+                oldHistory: [],
+
+                logs: [],
             }
         },
 
@@ -371,11 +382,17 @@
             },
 
             score () {
-                this.$refs['scores-modal'].init()
+                this.$nextTick(() => this.$refs['scores-modal'].init())
+            },
+
+            oldScore (room) {
+                this.oldPlayers = room.players
+                this.oldHistory = room.history
+                this.$nextTick(() => this.$refs['old-scores-modal'].init())
             },
 
             info () {
-                this.$refs['info-modal'].init()
+                this.$nextTick(() => this.$refs['info-modal'].init())
             },
             
             log (message) {
@@ -401,6 +418,8 @@
 
     #app {
         background-color: #e79292;
+        overflow-y: scroll;
+        scrollbar-width: none;
     }
 
     .ui.grid, .ui.grid .column, .ui.grid .row {

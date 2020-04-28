@@ -351,10 +351,15 @@ io.on('connection', (socket) => {
         return
     }
 
-    console.log(username, 'connected. Socket id:', socket.id)
+    console.log(username, 'connected. Cookie:', match[1], 'Socket:', socket.id)
 
     // Send rooms to the connected player
-    socket.emit('rooms', _.mapValues(rooms, room => room.players.length))
+    socket.emit('rooms', _.mapValues(rooms, room => ({
+        players: _.map(room.players, 'username'),
+        scores: _.map(room.players, 'score'),
+        history: room.history,
+        finished: room.finished,
+    })))
 
     // If the player is already in a not finished room:
     //      - update the socket with the new one
@@ -383,7 +388,12 @@ io.on('connection', (socket) => {
 
             console.log(username, 'joined room', name)
 
-            io.emit('rooms', _.mapValues(rooms, room => room.players.length))
+            io.emit('rooms', _.mapValues(rooms, room => ({
+                players: _.map(room.players, 'username'),
+                scores: _.map(room.players, 'score'),
+                history: room.history,
+                finished: room.finished,
+            })))
 
             if (room.players.length == 4) {
                 startGame(room)

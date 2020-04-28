@@ -11,6 +11,10 @@
                 <template v-for="element, index in _.zip(players, scores)" v-if="element[0]">
                     <div>
                         {{ element[0] }}
+                        <i class="tiny circle icon"
+                           v-if="contract == 6 && Math.max(matrix[index][dealer], matrix[dealer][index]) > 0"
+                           :class="Math.max(matrix[index][dealer], matrix[dealer][index]) == 2 ? 'red' : 'black'">
+                        </i>
                         <i v-if="contract == 6 && currentPlayer == index" class="small user icon"></i>
                     </div>
                     <div class="score">
@@ -159,6 +163,7 @@
             'contract',
             'players',
             'scores',
+            'dealer',
             'matrix',
             'firstPlayer',
             'currentPlayer',
