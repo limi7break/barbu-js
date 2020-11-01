@@ -378,7 +378,11 @@ class Domino extends Contract {
 
             } else {
                 
-                _.map(this.players, player => player.socket.emit('log', this.players[this.currentPlayer].username + ' passed!'))
+                _.map(this.players, player => {
+                    if (player.socket.emit) {
+                        player.socket.emit('log', this.players[this.currentPlayer].username + ' passed!')
+                    }
+                })
                 this.currentPlayer = (this.currentPlayer + 1) % 4
             
             }

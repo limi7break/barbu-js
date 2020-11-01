@@ -71,7 +71,11 @@ function getTrickWinner (firstPlayer, trickCards, trumpSuit) {
 }
 
 function broadcast (players, eventName, ...args) {
-    _.map(players, player => player.socket.emit(eventName, ...args))
+    _.map(players, player => {
+        if (player.socket.emit) {
+            player.socket.emit(eventName, ...args)
+        }
+    })
 }
 
 global.Card = Card

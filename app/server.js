@@ -130,7 +130,11 @@ async function playContract (room) {
 
     // Distribute cards and send hand to players
     room.players = _.map(room.players, player => _.assign(player, { hand: _.sortBy(deck.draw(13)) }))
-    _.map(room.players, player => player.socket.emit('hand', player.hand))
+    _.map(room.players, player => {
+        if (player.socket.emit) {
+            player.socket.emit('hand', player.hand)
+        }
+    })
 
     // Ask dealer to choose the contract
     do {
